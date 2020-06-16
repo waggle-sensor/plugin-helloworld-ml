@@ -26,4 +26,4 @@ $ python3 app.py -input http://camera:8090/live
 
 #### Registering The Application to Edge Code Repository
 
-The application needs to be registered in the Edge code repository to be running on Waggle nodes. [App specification](app_spec.json) helps to define the application manifest when registering the application. The file can directly be fed into the Edge code repository to register. However, the registration process can also be done via Waggle/SAGE UI and the app_specification.json is not required in this way.
+The application needs to be registered in the Edge code repository to be running on Waggle nodes. [App specification](sage.json) helps to define the application manifest when registering the application. The file can directly be fed into the Edge code repository to register. However, the registration process can also be done via Waggle/SAGE UI and the app_specification.json is not required in this way.
