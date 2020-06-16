@@ -20,6 +20,8 @@ $ docker buildx \
   -t helloworld \
   --platform linux/arm/v7,linux/arm64,linux/amd64 \
   --push .
+# Run the following command on any of armv7l, arm64, and amd64
+$ docker run -ti --rm helloworld
 ```
 
 However, if a single Dockerfile cannot work on all the target architectures due to missing packages in a particular architecture and etc, it is advised to name Dockerfile as Dockerfile.${arch}. For example,
