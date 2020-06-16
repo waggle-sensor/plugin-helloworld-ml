@@ -4,7 +4,11 @@ This repository guides Waggle users to build their own repository containing the
 
 #### Dockerfile
 
-All user applications must be containerized to be running on Waggle nodes or on a [virtual Waggle](https://github.com/waggle-sensor/waggle-node). Dockerfile lets Waggle users build a Docker image containing the application. It is recommended to use [Waggle base images](https://github.com/waggle-sensor/edge-plugins#which-waggle-image-i-choose-for-my-application) for compatibility with the Waggle platform. Waggle platform supports multiple architectures using the same Dockerfile to run the application on various edge devices. If Dockerfile does not work on all the target architecture due to missing packages, it is advised to name Dockerfile as Dockerfile.${arch}. For example,
+All user applications must be containerized to be running on Waggle nodes or on a [virtual Waggle](https://github.com/waggle-sensor/waggle-node). Dockerfile lets Waggle users build a Docker image containing the application and dependent libraries. It is strictly required to use [Waggle base images](https://github.com/waggle-sensor/edge-plugins#which-waggle-image-i-choose-for-my-application) for compatibility with the Waggle platform. However, there can be an exception that users might want to use other base image (e.g., Nvidia-docker image) to build. That should not be a problem for Waggle nodes to run it, it may take more time/effort to "certify" the application can be running on the nodes. The Dockerfile is usually located in the root of the application file structure. The name of Dockerfile should not be changed unless it has to.
+
+#### Dockerfile for Multi-architecture Support
+
+Waggle platform supports multiple architectures using the same Dockerfile to run the application on various edge devices. Having a single Dockerfile for multi-architecture is desired. However, if Dockerfile cannot work on all the target architectures due to missing packages in a particular architecture and etc, it is advised to name Dockerfile as Dockerfile.${arch}. For example,
 
 ```
 Dockerfile             # Doekerfile for all target architecture
