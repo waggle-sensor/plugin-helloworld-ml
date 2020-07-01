@@ -8,7 +8,7 @@ FROM ubuntu:18.04
 CMD ["/bin/echo", "hello world"]
 EOF
 # Docker build to make an image for armv7l, arm64, and amd64 (i.e., x86_64)
-$ docker buildx \
+$ docker buildx build \
   -t helloworld \
   --platform linux/arm/v7,linux/arm64,linux/amd64 \
   --push .
