@@ -4,7 +4,7 @@ This repository guides SAGE/Waggle users on how to build their own repository co
 
 #### Step 1: Prepare A Development Environment
 
-You can use your laptop (or desktop) to train your model and develop your plugin or use one of the computing nodes SAGE project offers. The support includes high performance computing (HPC) grade computing nodes with and without GPU acceleration. Refer to [Chameleon guide]() to start with Chameleon for your development environment.
+You can use your laptop (or desktop) to train your model and develop your plugin or use one of the computing nodes SAGE project offers. The support includes high performance computing (HPC) grade computing nodes with and without GPU acceleration. Refer to [Chameleon guide](https://chameleoncloud.readthedocs.io/en/latest/getting-started/index.html) to start with Chameleon for your development environment.
 
 One of the easiest ways to build machine learning applications is to use [Jupyter](https://jupyter.org). As of June 2020, we currently support Python3 as a programming language for running plugins. Other programming languagues such as C++ and Go may be supported in the future.
 
