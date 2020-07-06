@@ -1,6 +1,6 @@
 #### Dockerfile for Multi-architecture Support
 
-Docker natively supports multi-architecture through `qemu` library or through `buildx` tool (See [more](https://docs.docker.com/docker-for-mac/multi-arch/)). This means that having a single Dockerfile can be used to build images that support different architecture. SAGE/Waggle platform encourages users to utilize this feature to run their application on various edge devices. With the native support from Docker on this, it is highly recommended to use a single Dockerfile for multi-architecture support. An example of multi-arch support would be,
+Docker natively supports multi-architecture through `qemu` library or through `buildx` tool (See [more](https://docs.docker.com/docker-for-mac/multi-arch/)). This means that having a single Dockerfile can be used to build images that support different architecture. SAGE/Waggle platform encourages users to utilize this feature to run their plugin on various edge devices. With the native support from Docker on this, it is highly recommended to use a single Dockerfile for multi-architecture support. An example of multi-arch support would be,
 
 ```
 $ cat <<EOF > Dockerfile
@@ -16,7 +16,7 @@ $ docker buildx build \
 $ docker run -ti --rm helloworld
 ```
 
-However, if a single Dockerfile cannot work on all the target architectures due to missing packages in a particular architecture and etc, it is advised to name Dockerfile as Dockerfile.${arch}. For example,
+However, if a single Dockerfile cannot work on all the target architectures due to missing packages in a particular architecture or the Docker instructions are completely different between architectures, it is advised to name Dockerfile as Dockerfile.${arch}\_${device}. For example,
 
 ```
 Dockerfile             # Doekerfile for all target architecture

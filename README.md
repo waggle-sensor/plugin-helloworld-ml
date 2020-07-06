@@ -40,23 +40,41 @@ $ open http://127.0.0.1:8888/?token=${TOKEN}
 
 Follow [the jupyter notebook](docs/training_mask_classifier.ipynb) to train a convolutional neural network (CNN) model to classify people with and without wearing a mask.
 
-#### Step 4: Build A Plugin
+SAGE offers an object storage for users to upload their trained models and download them when building the application that uses the models. This allows not only to free the space in the user's repository, but also securly store the model and be easily referenced in SAGE.
 
-It is beneficial to use command line arguments to feed input(s) and parameters to the main code of your application. This lets the application switch between "dev" and "production" mode easily. This approach makes it easy to register the applicaiton to our Docker registry through the Edge code repository as then our ECR uses the command line argument to test and profile the application in order to "certify" it.
+__NOTE: The SAGE storage API is under an active development; in this helloworld we manually copy the trained model into the app folder__
 
 ```
-# on development get an image from local filesystem
-$ python3 app.py -debug -input image.jpg
+# as an example in Python
+SAGE.upload('model_path')
+```
+
+#### Step 4: Build A Plugin
+
+The application, from now is called `plugin`, is a piece of software that runs the trained model at the edge for inferencing. This is a product you would wish to release to the community to help solving the scientific problems.
+
+It is beneficial to use command line arguments in the plugin to feed input(s) and parameters to the main code of your plugin. This lets the plugin switch between `development` and `production` mode easily. This approach makes it easy to register the plugin to our Docker registry through the edge code repository (ECR) as then our ECR uses the command line arguments to test and profile the plugin in order to "certify" it.
+
+```
+# on development get an image from the local filesystem
+$ python3 app/app.py \
+  -verbose \
+  -input image.jpg \
+  -model app/mask_classifier_mobilenetv2_224_tuned.tflite
+
 # on testing get an image from a stream of a camera
-$ python3 app.py -input http://camera:8090/live
+$ python3 app.py \
+  -input http://camera:8090/live \
+  -model app/mask_classifier_mobilenetv2_224_tuned.tflite \
+  -interval 1
 ```
 
 #### Step 5: Make Dockerfile
 
-All user applications must be containerized to be running on SAGE/Waggle nodes or on a [virtual Waggle](https://github.com/waggle-sensor/waggle-node). Dockerfile allows users to build a Docker image containing the application with and without models and dependent libraries. It is strictly required to use [Waggle base images](https://github.com/waggle-sensor/edge-plugins#which-waggle-image-i-choose-for-my-application) for the compatibility with the SAGE/Waggle platform. However, there can be an exception that users might want to use other base image (e.g., Nvidia-docker image) to build. That should not be a problem for SAGE/Waggle nodes to run it. However, it may take more time/effort to "certify" that the application can be running on the nodes. The Dockerfile is usually located in the root of the application file structure. The name of Dockerfile should not be changed unless it has to.
+All user plugins must be containerized to be running on SAGE/Waggle nodes or on a [virtual Waggle](https://github.com/waggle-sensor/waggle-node). Dockerfile allows users to build a Docker image containing the plugin with and without models and dependent libraries. It is strictly required to use [Waggle base images](https://github.com/waggle-sensor/edge-plugins#which-waggle-image-i-choose-for-my-application) as a base image for the compatibility with the SAGE/Waggle platform. However, there can be an exception that users might want to use other base images (e.g., Nvidia-docker image) to build. That should not be a problem for SAGE/Waggle nodes to run it. However, it may take more time/effort to "certify" that the plugin can be running on the nodes. The Dockerfile is usually located in the root of the application file structure. The name of Dockerfile should not be changed unless it has to.
 
-If the application needs to be running on multiple architecture platforms (e.g., amd64, arm64, and armv7), please refer to [Dockerfile.arch](docs/docker_multiarch.md). This hello world ML plugin requires Tensorflow Lite runtime library and the name of the library differs for different architecture (as of June 2020). It is therefore necessary to have multiple Dockerfile to support multiple architectures. Please refer to [Dockerfile.armv7](Dockerfile.armv7), [Dockerfile.arm64](Dockerfile.arm64), and [Dockerfile.amd64](Dockerfile.amd64) for detail.
+If the application needs to be running on multiple architecture platforms (e.g., amd64, arm64, and armv7), please refer to [Dockerfile.arch](docs/docker_multiarch.md). For example, this hello world ML plugin requires Tensorflow Lite runtime library and the name of the library differs for different architecture (as of June 2020). It is therefore necessary to specify different library package names on each architecture. Please refer to [Dockerfile](Dockerfile) for details.
 
-#### Step 6: Registering The Application to Edge Code Repository
+#### Step 6: Registering The Plugin to Edge Code Repository
 
-The application needs to be registered in the Edge code repository to be running on SAGE/Waggle nodes. [App specification](sage.json) helps to define the application manifest when registering the application. The file can directly be fed into the Edge code repository to register. The registration process can also be done via Waggle/SAGE UI and the app_specification.json is not required in this way.
+The Plugin needs to be registered in ECR to be running on SAGE/Waggle nodes. [Plugin specification](sage.json) helps to define the plugin manifest when registering. The file can directly be fed into ECR to register. The registration process can also be done via Waggle/SAGE UI and the sage.json is not required in this way.

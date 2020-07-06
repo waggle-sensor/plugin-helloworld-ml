@@ -2,6 +2,7 @@ import time
 import datetime
 import argparse
 import multiprocessing
+from itertools import compress
 
 import cv2
 import numpy as np
@@ -23,7 +24,8 @@ def open_load_model(model_path):
     return interpreter
 
 
-def worker_main(args):
+def worker_main(args, heartbeat):
+    interval = int(args.interval)
     print(f'opening input {args.input}', flush=True)
     capture = open_video_capture(args.input)
 
@@ -41,12 +43,19 @@ def worker_main(args):
         interpreter.invoke()
         return interpreter.get_tensor(output_index)
 
-    print(f'loading model and model config', flush=True)
+    # softmax in numpy
+    def softmax(x):
+        e_x = np.exp(x)
+        return e_x / e_x.sum()
+
+    print('loading model and model config', flush=True)
     interpreter = open_load_model(args.model)
     input_details = interpreter.get_input_details()
     input_index = input_details[0]['index']
     output_details = interpreter.get_output_details()
     output_index = output_details[0]['index']
+
+    class_names = np.array(['WithoutMask', 'WithMask'])
 
     while True:
         heartbeat.put(1)
@@ -57,19 +66,32 @@ def worker_main(args):
         if args.verbose:
             print('read image', flush=True)
 
-        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        input_data = np.expand_dims(image, axis=0)
+        image_resized = cv2.resize(image, (224, 224))
+        image_rgb = cv2.cvtColor(image_resized, cv2.COLOR_BGR2RGB)
+        input_data = np.expand_dims(image_rgb, axis=0)
+        input_data = input_data.astype(np.float32)
 
         if args.verbose:
             start_t = time.time()
-        inferencing(interpreter, input_index, output_index, input_data)
+        output_data = inferencing(interpreter, input_index, output_index, input_data)
+        
         if args.verbose:
-            print('{:.2f} elapsed for inferencing'.format(time.time - start_t))
+            print('{:.2f} elapsed for inferencing'.format(time.time() - start_t), flush=True)
 
-        if args.interval != 0:
+        results = np.squeeze(output_data)
+        probabilities = softmax(results)
+
+        top_5 = results.argsort()[-5:][::-1]
+        print('results(prob: class):', flush=True)
+        for i in top_5:
+            print('{:8.6f}: {}'.format(
+                probabilities[i],
+                class_names[i]), flush=True)
+        
+        if interval > 0:
             if args.verbose:
-                print('sleeping for {} seconds'.format(args.interval))
-            time.sleep(args.interval)
+                print('sleeping for {} seconds'.format(interval), flush=True)
+            time.sleep(interval)
 
 
 def main(args):
