@@ -18,6 +18,7 @@
     "metadata": {
         "my-science-data": 12345
     },
+    "id": 101,
     "name": "helloworld",
     "namespace": "waggle",
     "source": "https://github.com/waggle-sensor/plugin-helloworld.git#master#./Dockerfile",
