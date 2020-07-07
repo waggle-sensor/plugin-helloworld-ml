@@ -19,7 +19,7 @@
         "my-science-data": 12345
     },
     "id": 101,
-    "name": "helloworld",
+    "name": "helloworld-ml",
     "namespace": "waggle",
     "source": "https://github.com/waggle-sensor/plugin-helloworld.git#master#./Dockerfile",
     "version": "1.0.0"
