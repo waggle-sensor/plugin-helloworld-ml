@@ -6,4 +6,4 @@ RUN pip3 install --no-cache-dir \
 COPY app/ /app/
 WORKDIR /app
 
-ENTRYPOINT ["/usr/bin/python3", "/app/main.py"]
+ENTRYPOINT ["/usr/bin/python3", "/app/app.py"]
