@@ -8,13 +8,15 @@ import time
 import datetime
 import argparse
 import multiprocessing
+import os
 
 from itertools import compress
 from glob import glob
 
 
 def open_load_model(model_path):
-    bst = xgb.load_model(model_path)
+    bst = xgb.Booster()
+    bst = bst.load_model(model_path)
     return bst
 
 def load_file(file_path):
@@ -65,7 +67,7 @@ def worker_main(args, heartbeat):
     
     class_names = ['clear', 'cloudy', 'rain']
     # First get the time period using act
-
+    
     if args.time is None:
         file_list = glob('sgpdlacfC1.a1.%s*.nc' % args.date)
         file_name = file_list[-1]
@@ -90,7 +92,10 @@ def worker_main(args, heartbeat):
             for i in range(len(out_predict)):
                 print(scp['time_bins'][i] + ':' + class_names[int(out_predict[i])])
     else:
-        download_data(args.date, args.time)
+        try:
+            download_data(args.date, args.time)
+        except TypeError:
+            print("No files found...checking for local files.")
         file_list = glob('sgpdlacfC1.a1.%s*.nc' % args.date)
         file_name = file_list[-1]
         dsd_ds = process_file(input_ds)
