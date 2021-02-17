@@ -15,18 +15,26 @@ from glob import glob
 
 
 def open_load_model(model_path):
+    print(model_path)
     bst = xgb.Booster()
-    bst = bst.load_model(model_path)
+    bst.load_model(model_path)
     return bst
 
+
 def load_file(file_path):
-    test_file = highiq.io.load_arm_netcdf(file_path)
+    test_file = act.io.armfiles.read_netcdf(file_path)
+    num_times = len(test_file.time_offset.values)
+    new_acf_bkg = np.tile(test_file.acf_bkg.values, (num_times, 1, 1, 1))
+    test_file['acf_bkg'] = xr.DataArray(new_acf_bkg, dims=(
+        'time', 'nsamples', 'nlags', 'complex'))
     return test_file
+
 
 def process_file(ds):
     ds_out = highiq.calc.get_psd(ds)
     ds_out = highiq.calc.get_lidar_moments(ds_out)
     return ds_out
+
 
 def get_scp(ds, model_name, interval=5):
     range_bins = np.arange(60., 11280., 120.)
@@ -36,31 +44,43 @@ def get_scp(ds, model_name, interval=5):
     scp_ds = {}
     dates = pd.date_range(ds.time.values[0],
                           ds.time.values[-1], freq='%dmin' % interval)
+    times = ds.time.values
+    snr = ds['snr'].values
+    mname = model_name
     while locs > -1:
-        locs = model_name.find("snr")
+        locs = mname.find("snr")
         if locs > -1:
-            snr_thresholds.append(float(model_name[locs+5:locs+15]))
-            scp_ds['snrgt%f' % snr_thresholds[-1]] = np.zeros(len(dates) - 1, len(times) - 1)
+            snr_thresholds.append(float(mname[locs+5:locs+13]))
+            scp_ds['snrgt%f' % snr_thresholds[-1]] = np.zeros(
+                    (len(dates) - 1, len(times) - 1))
+            mname = mname[locs+13:]
 
-    for i in range(len(dates)-1):
+    for i in range(len(dates) - 1):
         time_inds = np.argwhere(np.logical_and(ds.time.values >= dates[i],
-                                               ds.time.values < dates[i+1]))
+                                               ds.time.values < dates[i + 1]))
+        if len(time_inds) == 0:
+            continue
         for j in range(len(range_bins) - 1):
             range_inds = np.argwhere(np.logical_and(
                 ds.range.values >= range_bins[j], ds.range.values < range_bins[j+1]))
-            snrs = ds['snr'].values[time_inds, range_inds]
+            #time_inds = np.squeeze(time_inds)
+            range_inds = range_inds.astype(int)
+            snrs = snr[int(time_inds[0]):int(time_inds[-1]), 
+                    int(range_inds[0]):int(range_inds[-1])]
             for snr_thresh in snr_thresholds:
                 scp_ds['snrgt%f' % snr_thresh][i, j] = len(np.argwhere(snrs > snr_thresh)) / \
-                                                       (len(time_inds) * len(range_inds))
-    scp_ds['input_array'] = np.concatenate([scp_ds[var_keys] in scp_ds.keys()], axis=1)
-
+                                                       (len(time_inds) * len(range_inds)) * 100
+    scp_ds['input_array'] = np.concatenate(
+            [scp_ds[var_keys] for var_keys in scp_ds.keys()], axis=1)
     scp_ds['time_bins'] = dates
     return scp_ds
-        
+
+
 def download_data(date, time):
     act.discovery.download_data('rjackson', '3326641ebc6b55aa',
                                 'sgpdlacfC1.a1', date, date, time)
-    
+
+
 def worker_main(args, heartbeat):
     interval = int(args.interval)
     print(f'opening input {args.input}', flush=True)
@@ -85,12 +105,12 @@ def worker_main(args, heartbeat):
             file_list = glob('sgpdlacfC1.a1.%s*.nc' % args.date)
             file_name = file_list[-1]
             dsd_ds = process_file(input_ds)
-            scp = get_scp(dsd_ds)
+            scp = get_scp(dsd_ds, args.model)
             input_ds.close()
             dsd_ds.close()
-            out_predict = model.predict(scp['input_array'])
+            out_predict = model.predict(xgb.DMatrix(scp['input_array']))
             for i in range(len(out_predict)):
-                print(scp['time_bins'][i] + ':' + class_names[int(out_predict[i])])
+                print(str(scp['time_bins'][i]) + ':' + class_names[int(out_predict[i])])
     else:
         try:
             download_data(args.date, args.time)
@@ -99,12 +119,12 @@ def worker_main(args, heartbeat):
         file_list = glob('sgpdlacfC1.a1.%s*.nc' % args.date)
         file_name = file_list[-1]
         dsd_ds = process_file(input_ds)
-        scp = get_scp(dsd_ds)
+        scp = get_scp(dsd_ds, args.model)
         input_ds.close()
         dsd_ds.close()
-        out_predict = model.predict(scp['input_array'])
+        out_predict = model.predict(xgb.DMatrix(scp['input_array']))
         for i in range(len(out_predict)):
-            print(scp['time_bins'][i] + ':' + class_names[int(out_predict[i])])
+            print(str(scp['time_bins'][i]) + ':' + class_names[int(out_predict[i])])
 
 
 def main(args):
@@ -114,9 +134,9 @@ def main(args):
     heartbeat = multiprocessing.Queue()
     worker = multiprocessing.Process(
         target=worker_main, args=(args, heartbeat))
+    #model = open_load_model(args.model)
+    #worker_main(args)
 
-    model = open_load_model(args.model)
-    
     try:
         worker.start()
         while True:
@@ -140,7 +160,7 @@ if __name__ == '__main__':
         help='Path to input device or stream')
     parser.add_argument(
         '-model', dest='model',
-        action='store', default='modelsnrgt3.000000snrgt5.000000.json',
+        action='store', default='/app/modelsnrgt3.000000snrgt5.000000.json',
         help='Path to model')
     parser.add_argument(
         '-interval', dest='interval',
