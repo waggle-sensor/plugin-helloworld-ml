@@ -69,12 +69,12 @@ $ python3 app.py \
   -interval 1
 ```
 
-#### Step 5: Upload plugin to SAGE object store
-- TO BE DETERMINED HOW TO UPLOAD. For more detail, contact Waggle team.
-
-#### Step 6: Get a user credential for SAGE
+#### Step 5: Get a user credential for SAGE
 - TO BE DETERMINED HOW TO UPLOAD. For more detail, contact Waggle team.
 - For now (03/31/2021) you can get one from [Globus](https://sage.nautilus.optiputer.net). For more detail, contact Waggle team.
+
+#### Step 6: Upload plugin to SAGE object store
+- TO BE DETERMINED HOW TO UPLOAD. For more detail, contact Waggle team.
 
 #### Step 8: Make Dockerfile
 
