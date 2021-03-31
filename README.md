@@ -69,12 +69,22 @@ $ python3 app.py \
   -interval 1
 ```
 
-#### Step 5: Make Dockerfile
+#### Step 5: Upload plugin to SAGE object store
+- TO BE DETERMINED HOW TO UPLOAD. For more detail, contact Waggle team.
+
+#### Step 6: Get user credential for SAGE
+- TO BE DETERMINED HOW TO UPLOAD. For more detail, contact Waggle team.
+- For now (03/31/2021) you can get one from [Globus](https://sage.nautilus.optiputer.net). For more detail, contact Waggle team.
+
+#### Step 8: Make Dockerfile
 
 All user plugins must be containerized to be running on SAGE/Waggle nodes or on a [virtual Waggle](https://github.com/waggle-sensor/waggle-node). Dockerfile allows users to build a Docker image containing the plugin with and without models and dependent libraries. It is strictly required to use [Waggle base images](https://github.com/waggle-sensor/edge-plugins#which-waggle-image-i-choose-for-my-application) as a base image for the compatibility with the SAGE/Waggle platform. However, there can be an exception that users might want to use other base images (e.g., Nvidia-docker image) to build. That should not be a problem for SAGE/Waggle nodes to run it. However, it may take more time/effort to "certify" that the plugin can be running on the nodes. The Dockerfile is usually located in the root of the application file structure. The name of Dockerfile should not be changed unless it has to.
 
 If the application needs to be running on multiple architecture platforms (e.g., amd64, arm64, and armv7), please refer to [Dockerfile.arch](docs/docker_multiarch.md). For example, this hello world ML plugin requires Tensorflow Lite runtime library and the name of the library differs for different architecture (as of June 2020). It is therefore necessary to specify different library package names on each architecture. Please refer to [Dockerfile](Dockerfile) for details.
 
-#### Step 6: Registering The Plugin to Edge Code Repository
+#### Step 9: Registering The Plugin to Edge Code Repository
 
 The Plugin needs to be registered in ECR to be running on SAGE/Waggle nodes. [Plugin specification](sage.json) helps to define the plugin manifest when registering. The file can directly be fed into ECR to register. The registration process can also be done via Waggle/SAGE UI and the sage.json is not required in this way.
+
+#### Notes to developers:
+- We provide a work-through of current (03/31/2021) 'how to create your own Docker container a plugin' in [here]().
