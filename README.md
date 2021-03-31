@@ -73,10 +73,10 @@ $ python3 app.py \
 - TO BE DETERMINED HOW TO UPLOAD. For more detail, contact Waggle team.
 - For now (03/31/2021) you can get one from [Globus](https://sage.nautilus.optiputer.net). For more detail, contact Waggle team.
 
-#### Step 6: Upload plugin to SAGE object store
+#### Step 6: Upload [only] machine learning models to SAGE object store
 - TO BE DETERMINED HOW TO UPLOAD. For more detail, contact Waggle team.
 
-#### Step 8: Make Dockerfile
+#### Step 8: Make a Dockerfile
 
 All user plugins must be containerized to be running on SAGE/Waggle nodes or on a [virtual Waggle](https://github.com/waggle-sensor/waggle-node). Dockerfile allows users to build a Docker image containing the plugin with and without models and dependent libraries. It is strictly required to use [Waggle base images](https://github.com/waggle-sensor/edge-plugins#which-waggle-image-i-choose-for-my-application) as a base image for the compatibility with the SAGE/Waggle platform. However, there can be an exception that users might want to use other base images (e.g., Nvidia-docker image) to build. That should not be a problem for SAGE/Waggle nodes to run it. However, it may take more time/effort to "certify" that the plugin can be running on the nodes. The Dockerfile is usually located in the root of the application file structure. The name of Dockerfile should not be changed unless it has to.
 
