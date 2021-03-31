@@ -87,4 +87,4 @@ If the application needs to be running on multiple architecture platforms (e.g.,
 The Plugin needs to be registered in ECR to be running on SAGE/Waggle nodes. [Plugin specification](sage.json) helps to define the plugin manifest when registering. The file can directly be fed into ECR to register. The registration process can also be done via Waggle/SAGE UI and the sage.json is not required in this way.
 
 #### Notes to developers:
-- We provide a work-through of current (03/31/2021) 'how to create your own Docker container a plugin' in [here]().
+- We provide a work-through of current (03/31/2021) 'how to create your own Docker container' in [here]().
