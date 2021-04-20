@@ -1,0 +1,21 @@
+name: helloworld-ml
+namespace: waggle
+version: "1.0"
+description: my hello world app
+
+source:
+    architectures:
+        - linux/amd64
+        - linux/arm/v7
+        - linux/arm64
+    url: https://github.com/waggle-sensor/plugin-helloworld.git
+
+
+arguments:
+    - speed
+    - '5'
+inputs:
+    - id: speed
+      type: int
+metadata:
+  my-science-data: 12345
