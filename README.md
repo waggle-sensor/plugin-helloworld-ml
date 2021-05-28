@@ -1,18 +1,18 @@
-### Hello World Plugin for Machine Learning in SAGE/Waggle
+# Hello World Plugin for Machine Learning in SAGE/Waggle
 
 This repository guides SAGE/Waggle users on how to build their own repository containing their machine learning application, called a plugin, a Dockerfile that describes how to build the application, and a manifest file to specify metadata of the application being able to run it on SAGE/Waggle nodes. You can use this repository as a template to create your repository (See more on [Github Help](https://help.github.com/en/github/creating-cloning-and-archiving-repositories/creating-a-repository-from-a-template)). The following sections describe steps to build this hello world ML plugin that can be running on SAGE/Waggle nodes.
 
-#### Step 1: Prepare A Development Environment
+## Step 1: Prepare A Development Environment
 
 You can use your laptop (or desktop) to train your model and develop your plugin or use one of the computing nodes SAGE project offers. The support includes high performance computing (HPC) grade computing nodes with and without GPU acceleration. Refer to [Chameleon guide](https://chameleoncloud.readthedocs.io/en/latest/getting-started/index.html) to start with Chameleon for your development environment.
 
 One of the easiest ways to build machine learning applications is to use [Jupyter](https://jupyter.org). As of June 2020, we currently support Python3 as a programming language for running plugins. Other programming languagues such as C++ and Go may be supported in the future.
 
-#### Step 2: Prepare Dataset
+## Step 2: Prepare Dataset
 
 SAGE offers various types of datasets and is adding more datasets as we collect more samples from the SAGE/Waggle nodes already deployed in the field. In this hello world example, we use [face mask dataset](https://www.kaggle.com/ashishjangra27/face-mask-12k-images-dataset) from Kaggle. Download it on your development environment. You can bring your own dataset as well.
 
-#### Step 3: Training A Model
+## Step 3: Training A Model
 
 To spin up an instance of Jupyter iPython notebook,
 ```
@@ -49,7 +49,7 @@ __NOTE: The SAGE storage API is under an active development; in this helloworld 
 SAGE.upload('model_path')
 ```
 
-#### Step 4: Build A Plugin
+## Step 4: Build A Plugin
 
 The application, from now is called `plugin`, is a piece of software that runs the trained model at the edge for inferencing. This is a product you would wish to release to the community to help solving the scientific problems.
 
@@ -69,20 +69,20 @@ $ python3 app.py \
   -interval 1
 ```
 
-#### Step 5: Get a user credential for SAGE
+## Step 5: Get a user credential for SAGE
 - TO BE DETERMINED HOW TO UPLOAD. For more detail, contact Waggle team.
 - For now (03/31/2021) you can get one from [Globus](https://sage.nautilus.optiputer.net). For more detail, contact Waggle team.
 
-#### Step 6: Upload [only] machine learning models to SAGE object store
+## Step 6: Upload [only] machine learning models to SAGE object store
 - TO BE DETERMINED HOW TO UPLOAD. For more detail, contact Waggle team.
 
-#### Step 8: Make a Dockerfile
+## Step 8: Make a Dockerfile
 
 All user plugins must be containerized to be running on SAGE/Waggle nodes or on a [virtual Waggle](https://github.com/waggle-sensor/waggle-node). Dockerfile allows users to build a Docker image containing the plugin with and without models and dependent libraries. It is strictly required to use [Waggle base images](https://github.com/waggle-sensor/edge-plugins#which-waggle-image-i-choose-for-my-application) as a base image for the compatibility with the SAGE/Waggle platform. However, there can be an exception that users might want to use other base images (e.g., Nvidia-docker image) to build. That should not be a problem for SAGE/Waggle nodes to run it. However, it may take more time/effort to "certify" that the plugin can be running on the nodes. The Dockerfile is usually located in the root of the application file structure. The name of Dockerfile should not be changed unless it has to.
 
 If the application needs to be running on multiple architecture platforms (e.g., amd64, arm64, and armv7), please refer to [Dockerfile.arch](docs/docker_multiarch.md). For example, this hello world ML plugin requires Tensorflow Lite runtime library and the name of the library differs for different architecture (as of June 2020). It is therefore necessary to specify different library package names on each architecture. Please refer to [Dockerfile](Dockerfile) for details.
 
-#### Step 9: Registering The Plugin to Edge Code Repository
+## Step 9: Registering The Plugin to Edge Code Repository
 
 The Plugin needs to be registered in ECR to be running on SAGE/Waggle nodes. [Plugin specification](sage.json) helps to define the plugin manifest when registering. The file can directly be fed into ECR to register. The registration process can also be done via Waggle/SAGE UI and the sage.json is not required in this way.
 
