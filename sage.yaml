@@ -1,18 +1,9 @@
-name: lidar-id
-namespace: waggle
+name: "lidar-id"
 version: "1.0"
-description: An app for identifying cloud or rain coverage from the ARM Doppler Lidar
+description: "An app for identifying cloud or rain coverage from the ARM Doppler Lidar"
 
 source:
     architectures:
-        - linux/amd64
-    url: https://github.com/rcjackson/lidar-id.git
-
-arguments:
-    - speed
-    - '5'
-inputs:
-    - id: date
-      type: int
-metadata:
-  my-science-data: 12345
+        - "linux/amd64"
+    url: "https://github.com/rcjackson/lidar-id.git"
+    branch: "master"

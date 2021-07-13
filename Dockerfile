@@ -1,4 +1,4 @@
-FROM waggle/plugin-base:1.0.0-ml-cuda11.0-amd64
+FROM waggle/plugin-base:1.1.0-ml-cuda11.0-amd64
 
 RUN apt-get update -y 
 RUN apt-get install -y proj-bin
