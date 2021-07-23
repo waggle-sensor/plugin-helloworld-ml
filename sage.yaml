@@ -9,7 +9,7 @@ source:
         - linux/arm/v7
         - linux/arm64
     url: https://github.com/waggle-sensor/plugin-helloworld.git
-
+    branch: master
 
 arguments:
     - speed
