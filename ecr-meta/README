@@ -1,0 +1,15 @@
+Getting Started:
+----------------
+
+Each GitHub Repo submitted to ECR should have the following folder with the resources - 
+
+A) ecr-icon.jpg - An Icon for the project/work 512x512px. 
+B) ecr-science-image.jpg - A Science image for the project with a minimum size of 1920x1080px.
+C) ecr-science-description.md - Markdown with description of the science being done here (1 page of text) 
+D) ecr-project-url.txt - A URL to a Science page. This can be your project page if there is one, or any other place that provides more context to the work.   
+E) ecr-credits-license.txt - A list of Authors, technical collaborators, funding credits, license. The authors can optionally specify email and a webpage as shown below -
+                                Science Master <science@master.me> (http://sciencemaster.me.com/)
+F) ecr-project-keywords.txt - Keywords / ontology for the work. Use one of the following that best suits the work - 
+                                1. https://www.agu.org/Publish-with-AGU/Publish/Author-Resources/Index-terms
+                                2. https://www.ieee.org/content/dam/ieee-org/ieee/web/org/pubs/taxonomy_v101.pdf
+                                3. https://dl.acm.org/ccs 
