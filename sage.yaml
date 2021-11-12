@@ -1,8 +1,8 @@
 name: "weatherclassification"
 description: "An app for identifying cloud or rain coverage from the ARM Doppler Lidar"
-version: "1.0"
+version: "1.0.0"
 namespace: "sage"
-authors: "Robert Jackson <seongha.park@anl.gov>"
+authors: "Robert Jackson <rjackson@anl.gov>"
 collaborators: "Waggle Team <https://wa8.gl>"
 funding:
 license: "MIT License"
