@@ -1,4 +1,0 @@
-authors: Robert Jackson <rjackson@anl.gov> (https://www.linkedin.com/in/robert-jackson-bab4ba54/) 
-collaborators: Scott Collis, Nicola Ferrier, Pete Beckman, Rick Nueve, Sean Shakarahmi, Yongho Kim, Seongha Park, Raj Sankaran 
-funding: This project was funded by the Laboratory Directed Research and Development program
-license: This code is covered under the BSD 3-clause license.
