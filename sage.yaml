@@ -1,7 +1,12 @@
 name: "weather-classification"
+description: "ARM Doppler lidar weather classifier"
 version: "1.0"
 description: "An app for identifying cloud or rain coverage from the ARM Doppler Lidar"
-
+keywords: "lidar, cloud, rain, scene, identification, weather, xgboost, gradient boosting machine"
+homepage: "https://github.com/rcjackson/plugin-weatherclassification"
+authors: "Robert Jackson <seongha.park@anl.gov>"
+collaborators: "Waggle Team <https://wa8.gl>"
+license: "BSD 3-clause"
 source:
     architectures:
         - "linux/amd64"
