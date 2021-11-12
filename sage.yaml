@@ -1,4 +1,4 @@
-name: "weatherclassification"
+name: "weather-classification"
 description: "An app for identifying cloud or rain coverage from the ARM Doppler Lidar"
 version: "1.0.0"
 namespace: "sage"
