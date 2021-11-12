@@ -6,4 +6,4 @@ source:
     architectures:
         - "linux/amd64"
     url: "https://github.com/rcjackson/lidar-id.git"
-    branch: "master"
+    branch: "main"
