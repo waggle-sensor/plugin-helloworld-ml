@@ -4,7 +4,7 @@ version: "1.0.0"
 namespace: "sage"
 authors: "Robert Jackson <rjackson@anl.gov>"
 collaborators: "Waggle Team <https://wa8.gl>"
-funding:
+funding: "Argonne Laboratory Directed Research and Development"
 license: "MIT License"
 keywords: "lidar, cloud, rain, scene, identification, weather, xgboost"
 homepage: "https://github.com/rcjackson/plugin-weatherclassification"
