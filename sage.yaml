@@ -8,7 +8,6 @@ funding:
 license: "MIT License"
 keywords: "lidar, cloud, rain, scene, identification, weather, xgboost"
 homepage: "https://github.com/rcjackson/plugin-weatherclassification"
-funding:
 source:
     architectures:
         - "linux/amd64"
