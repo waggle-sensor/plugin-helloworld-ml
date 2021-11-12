@@ -1,4 +1,4 @@
-name: "lidar-id"
+name: "weather-classification"
 version: "1.0"
 description: "An app for identifying cloud or rain coverage from the ARM Doppler Lidar"
 
