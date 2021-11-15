@@ -15,6 +15,17 @@ May, P.T. and Lane, T.P. (2009), A method for using weather radar data to test c
 Met. Apps, 16: 425-432. https://doi.org/10.1002/met.150
 
 Friedman, J.H., (2001), Greedy function approximation: a gradient boosting machine. Annals of statistics, pp. 1189–1232
+
+# AI at Edge
+
+This model uses gradient boosting machines in order to categorize ARM Doppler Lidar data.
+The model takes in a statistical coverage product that provides percent coverage of echoes with SNR > 1, 3, 5, and 10 dB
+at 200 evenly spaced height levels ranging 0 to 12 km with 60 m spacing for each five minute period. The gradient boosting machine will then classify this
+vertical profile as clear, cloudy, and rainy. The gradient boosting machine is implemented in XGBoost which is
+optimized to use a CUDA-compatible GPU when present. The default model uses the statistical coverage of SNR > 3 and 5 dB
+as that model provided the best testing accuracy. However, models that classify using all permutations of the 
+statistical coverage product are provided.
+
 # Data needed
 
 The input data are autocorrelation function files from the ARM dlacf.a1 dataset. While the algorithm will work on input

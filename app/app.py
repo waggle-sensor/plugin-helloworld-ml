@@ -10,6 +10,8 @@ import argparse
 import multiprocessing
 import os
 
+import waggle.plugin as plugin
+
 from itertools import compress
 from glob import glob
 
@@ -22,7 +24,7 @@ def open_load_model(model_path):
 
 
 def load_file(file_path):
-    test_file = act.io.armfiles.read_netcdf(file_path)
+    test_file = xr.open_dataset(file_path)
     num_times = len(test_file.time_offset.values)
     new_acf_bkg = np.tile(test_file.acf_bkg.values, (num_times, 1, 1, 1))
     test_file['acf_bkg'] = xr.DataArray(new_acf_bkg, dims=(
@@ -89,35 +91,20 @@ def worker_main(args, heartbeat):
     # First get the time period using act
     
     if args.time is None:
-        file_list = glob('sgpdlacfC1.a1.%s*.nc' % args.date)
+        file_list = glob('/sgpdlacfC1.a1.%s*.nc.v0' % args.date)
         file_name = file_list[-1]
     else:
-        file_name = 'sgpdlacfC1.a1.%s.%s.nc' % (args.date, args.time)
-
-    input_ds = load_file(file_name)
+        file_name = '/sgpdlacfC1.a1.%s.%s.nc.v0' % (args.date, args.time)
 
     model = open_load_model(args.model)
-    if args.date == datetime.date.today().strftime('%Y%m%d') and time is None:
-        while True:
-            file_list = glob('sgpdlacfC1.a1.%s*.nc' % args.date)
-            if file_list == []:
-                download_data(args.date)
-            file_list = glob('sgpdlacfC1.a1.%s*.nc' % args.date)
-            file_name = file_list[-1]
-            dsd_ds = process_file(input_ds)
-            scp = get_scp(dsd_ds, args.model)
-            input_ds.close()
-            dsd_ds.close()
-            out_predict = model.predict(xgb.DMatrix(scp['input_array']))
-            for i in range(len(out_predict)):
-                print(str(scp['time_bins'][i]) + ':' + class_names[int(out_predict[i])])
-    else:
-        try:
+    if time is None:
+        file_list = glob('/sgpdlacfC1.a1.%s*.nc.v0' % args.date)
+        print(file_list)
+        if file_list == []:
             download_data(args.date, args.time)
-        except TypeError:
-            print("No files found...checking for local files.")
-        file_list = glob('sgpdlacfC1.a1.%s*.nc' % args.date)
+        file_list = glob('/sgpdlacfC1.a1.%s*.nc.v0' % args.date)
         file_name = file_list[-1]
+        input_ds = load_file(file_name)
         dsd_ds = process_file(input_ds)
         scp = get_scp(dsd_ds, args.model)
         input_ds.close()
@@ -125,6 +112,31 @@ def worker_main(args, heartbeat):
         out_predict = model.predict(xgb.DMatrix(scp['input_array']))
         for i in range(len(out_predict)):
             print(str(scp['time_bins'][i]) + ':' + class_names[int(out_predict[i])])
+            plugin.publish("weather.classifier.class",
+                           class_names[int(out_predict[i])],
+                           timestamp=scp['time_bins'][i])
+    else:
+        file_list = glob(file_name)
+        if file_list == []:
+            try:
+                download_data(args.date, args.time)
+                file_list = glob('/sgpdlacfC1.a1.%s*.nc.v0' % args.date)
+            except TypeError:
+                print("No files found.")
+                return
+        print(file_list)
+        file_name = file_list[-1]
+        input_ds = load_file(file_name)
+        dsd_ds = process_file(input_ds)
+        scp = get_scp(dsd_ds, args.model)
+        input_ds.close()
+        dsd_ds.close()
+        out_predict = model.predict(xgb.DMatrix(scp['input_array']))
+        for i in range(len(out_predict)):
+            print(str(scp['time_bins'][i]) + ':' + class_names[int(out_predict[i])])
+            plugin.publish("weather.classifier.class",
+                           class_names[int(out_predict[i])],
+                           timestamp=scp['time_bins'][i])
 
 
 def main(args):
@@ -140,7 +152,7 @@ def main(args):
     try:
         worker.start()
         while True:
-            heartbeat.get(timeout=30)  # throws an exception on timeout
+            heartbeat.get(timeout=180)  # throws an exception on timeout
     except Exception:
         pass
 
@@ -150,27 +162,29 @@ def main(args):
 
 
 if __name__ == '__main__':
+    plugin.init()
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '-verbose', dest='verbose',
+        '--verbose', dest='verbose',
         action='store_true', help='Verbose')
     parser.add_argument(
-        '-input', dest='input',
+        '--input', dest='input',
         action='store', default='sgpdlacfC1.a1',
         help='Path to input device or stream')
     parser.add_argument(
-        '-model', dest='model',
+        '--model', dest='model',
         action='store', default='/app/modelsnrgt3.000000snrgt5.000000.json',
         help='Path to model')
     parser.add_argument(
-        '-interval', dest='interval',
+        '--interval', dest='interval',
         action='store', default=0,
         help='Time interval in seconds')
-    parser.add_argument('-date', dest='date', action='store',
-                        default=datetime.date.today().strftime('%Y%m%d'),
+    parser.add_argument('--date', dest='date', action='store',
+                        default='20170731',
                         help='Date of record to pull')
-    parser.add_argument('-time', dest='time', action='store',
-                        default=None, help='Time of record to pull')
+    parser.add_argument('--time', dest='time', action='store',
+                        default='174445', help='Time of record to pull',
+                        type=ascii)
 
 
     main(parser.parse_args())
