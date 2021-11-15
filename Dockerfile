@@ -6,7 +6,6 @@ RUN apt-get install -y libproj-dev
 RUN apt-get install -y libgeos-dev
 RUN apt-get install -y cuda-11-0
 RUN apt-get install -y wget
-RUN wget https://www.dropbox.com/s/3z07s2atqgcndxj/sgpdlacfC1.a1.20170731.174445.nc.v0?dl=0 -O sgpdlacfC1.a1.20170731.174445.nc.v0
 
 RUN pip3 install shapely
 RUN pip3 install cupy-cuda110

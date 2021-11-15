@@ -7,6 +7,8 @@ import pandas as pd
 import time
 import datetime
 import argparse
+import urllib3
+import shutil
 import multiprocessing
 import os
 
@@ -91,18 +93,26 @@ def worker_main(args, heartbeat):
     # First get the time period using act
     
     if args.time is None:
-        file_list = glob('/sgpdlacfC1.a1.%s*.nc.v0' % args.date)
+        file_list = glob('/app/sgpdlacfC1.a1.%s*.nc.v0' % args.date)
         file_name = file_list[-1]
     else:
-        file_name = '/sgpdlacfC1.a1.%s.%s.nc.v0' % (args.date, args.time)
+        file_name = '/app/sgpdlacfC1.a1.%s.%s.nc.v0' % (args.date, args.time)
+
+    if file_name == '/app/sgpdlacfC1.a1.20170731.174445.nc.v0':
+        http = urllib3.PoolManager()
+        with open(file_name, mode='wb') as f:
+            r = http.request('GET',
+                'https://www.dropbox.com/s/3z07s2atqgcndxj/sgpdlacfC1.a1.20170731.174445.nc.v0?dl=0',
+                            preload_content=False)
+            shutil.copyfileobj(r, f)
 
     model = open_load_model(args.model)
     if time is None:
-        file_list = glob('/sgpdlacfC1.a1.%s*.nc.v0' % args.date)
+        file_list = glob('/app/sgpdlacfC1.a1.%s*.nc.v0' % args.date)
         print(file_list)
         if file_list == []:
             download_data(args.date, args.time)
-        file_list = glob('/sgpdlacfC1.a1.%s*.nc.v0' % args.date)
+        file_list = glob('/app/sgpdlacfC1.a1.%s*.nc.v0' % args.date)
         file_name = file_list[-1]
         input_ds = load_file(file_name)
         dsd_ds = process_file(input_ds)
@@ -120,7 +130,7 @@ def worker_main(args, heartbeat):
         if file_list == []:
             try:
                 download_data(args.date, args.time)
-                file_list = glob('/sgpdlacfC1.a1.%s*.nc.v0' % args.date)
+                file_list = glob('/app/sgpdlacfC1.a1.%s*.nc.v0' % args.date)
             except TypeError:
                 print("No files found.")
                 return
