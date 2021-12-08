@@ -10,3 +10,8 @@ XGBoost: https://xgboost.readthedocs.io/en/latest/
 HighIQ: https://openradarscience.org/HighIQ/
 
 Atmospheric Community Toolkit: https://arm-doe.github.io/ACT/
+
+## Funding
+
+This work was funded by both the Argonne Laboratory Directed Research and Development program and 
+NSF grant #[1935984](https://www.nsf.gov/awardsearch/showAward?AWD_ID=1935984).
