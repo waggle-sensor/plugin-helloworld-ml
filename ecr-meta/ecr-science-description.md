@@ -31,10 +31,15 @@ The path to these files must be specified in the app.py file.
 
 # Arguments
 --verbose: Display more information
+
 --input [ARM datastream]: The ARM datastream to use as input
+
 --model [json file]: The model file to use.
+
 --interval [time interval]: The time interval to classify over
+
 --date: The date to pull data from. Set to None to use latest date/time.
+
 --time: The time to pull data from.
 
 # Ontology
