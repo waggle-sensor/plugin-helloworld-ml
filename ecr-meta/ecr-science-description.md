@@ -1,6 +1,16 @@
 # Science
 
-This algorithm will classify raw ARM Doppler Lidar data into three categories: clear, cloudy, and rainy. The algorithm 
+The DOE Atmospheric Radiation Measurement (ARM) program collects observations of cloud properties
+from several Doppler lidars at the Southern Great Plains site in Oklahoma. However, the Doppler lidar spectra
+are too large to be transferred over and processed on the current infrastructure. For example, one hour
+of Doppler spectra from a vertically pointing Doppler lidar over SGP takes 1.2 GB. Therefore, doing multiyear
+analyses of these spectra while including all data is an impossibly large task. However, if we can
+filter out the data to only include time periods of interest to cloud modellers, this would vastly
+reduce the amount of data throughput while adding more information about the clouds than what is currently
+included in the ARM Archive. Therefore, this motived the development of a weather classifier for the vertically
+pointing ARM Doppler Lidar.
+
+This classifier will classify raw ARM Doppler Lidar data into three categories: clear, cloudy, and rainy. The algorithm 
 was developed by training a gradient boosting tree using [XGBoost](https://xgboost.readthedocs.io). The tree was trained
 on three months of ARM Doppler Lidar observations and is based off of the statistical coverage product of signal to
 noise ratio (May and Lane 2009). On the testing dataset, we report that the algorithm correctly classified images
@@ -9,7 +19,8 @@ as clear, cloudy, and rainy about 94% of the time.
 The algorithm will take as inputs the raw Doppler lidar autocorrelation functions. It will then use HighIQ to generate
 the signal to noise ratio that provides a view of the cloud, precipitation, and aerosol particles detected by the lidar.
 After this is done, then the statistical coverage product will be generated for use by the classifier. Finally, the
-gradient boosting tree will classify the time period based off of the generated statistical coverage product.
+gradient boosting tree will classify the time period based off of the generated statistical coverage product. The figure
+on the right shows the three classes of Doppler lidar 
 
 
 # AI at Edge
@@ -31,10 +42,15 @@ The path to these files must be specified in the app.py file.
 
 # Arguments
 --verbose: Display more information
+
 --input [ARM datastream]: The ARM datastream to use as input
+
 --model [json file]: The model file to use.
+
 --interval [time interval]: The time interval to classify over
+
 --date: The date to pull data from. Set to None to use latest date/time.
+
 --time: The time to pull data from.
 
 # Ontology
