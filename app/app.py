@@ -11,9 +11,12 @@ import urllib3
 import shutil
 import multiprocessing
 import os
+import base64
+import paramiko
 
 import waggle.plugin as plugin
 
+from datetime import datetime
 from itertools import compress
 from glob import glob
 
@@ -26,17 +29,17 @@ def open_load_model(model_path):
 
 
 def load_file(file_path):
-    test_file = xr.open_dataset(file_path)
-    num_times = len(test_file.time_offset.values)
-    new_acf_bkg = np.tile(test_file.acf_bkg.values, (num_times, 1, 1, 1))
-    test_file['acf_bkg'] = xr.DataArray(new_acf_bkg, dims=(
-        'time', 'nsamples', 'nlags', 'complex'))
+    test_file = highiq.io.load_arm_netcdf([file_path])
+    test_file['complex'] = test_file['complex'] + 1
     return test_file
 
 
 def process_file(ds):
+    print("Processing lidar moments...")
+    ti = time.time()
     ds_out = highiq.calc.get_psd(ds)
     ds_out = highiq.calc.get_lidar_moments(ds_out)
+    print("Done in %3.2f minutes" % ((time.time() - ti) / 60.))
     return ds_out
 
 
@@ -56,9 +59,10 @@ def get_scp(ds, model_name, interval=5):
         if locs > -1:
             snr_thresholds.append(float(mname[locs+5:locs+13]))
             scp_ds['snrgt%f' % snr_thresholds[-1]] = np.zeros(
-                    (len(dates) - 1, len(times) - 1))
+                    (len(dates) - 1, len(range_bins) - 1))
             mname = mname[locs+13:]
-
+    print((len(dates) - 1, len(range_bins) - 1))
+    
     for i in range(len(dates) - 1):
         time_inds = np.argwhere(np.logical_and(ds.time.values >= dates[i],
                                                ds.time.values < dates[i + 1]))
@@ -66,9 +70,11 @@ def get_scp(ds, model_name, interval=5):
             continue
         for j in range(len(range_bins) - 1):
             range_inds = np.argwhere(np.logical_and(
-                ds.range.values >= range_bins[j], ds.range.values < range_bins[j+1]))
-            #time_inds = np.squeeze(time_inds)
+                ds.range.values >= range_bins[j], 
+                ds.range.values < range_bins[j+1]))
             range_inds = range_inds.astype(int)
+            if len(range_inds) == 0:
+                continue
             snrs = snr[int(time_inds[0]):int(time_inds[-1]), 
                     int(range_inds[0]):int(range_inds[-1])]
             for snr_thresh in snr_thresholds:
@@ -77,43 +83,53 @@ def get_scp(ds, model_name, interval=5):
     scp_ds['input_array'] = np.concatenate(
             [scp_ds[var_keys] for var_keys in scp_ds.keys()], axis=1)
     scp_ds['time_bins'] = dates
+    print(scp_ds['input_array'].shape)
     return scp_ds
 
 
-def download_data(date, time):
-    act.discovery.download_data('rjackson', '3326641ebc6b55aa',
-                                'sgpdlacfC1.a1', date, date, time)
+def progress(bytes_so_far: int, total_bytes: int):
+    pct_complete = 100. * float(bytes_so_far) / float(total_bytes)
+    if int(pct_complete * 10) % 1000 == 0:
+        print("Total progress = %4.2f" % pct_complete)  
 
 
-def worker_main(args, heartbeat):
+def download_data(args):
+    bt = time.time()
+    passwd = base64.b64decode("S3VyQGRvMjM=".encode("utf-8"))
+    transport = paramiko.Transport('emerald.adc.arm.gov', 22)
+    username = 'rjackson'
+    transport.connect(username=username, password=passwd)
+    return_list = []
+    with paramiko.SFTPClient.from_transport(transport) as sftp:
+        sftp.chdir('/data/datastream/sgp/%s' % args.input)
+        if args.date is None and args.time is None:
+            file_list = [sorted(sftp.listdir())[-1]]
+        elif args.time is None:
+            file_list = sorted(sftp.listdir())
+            for f in file_list:
+                if not args.date in f:
+                    file_list.remove(f)
+        else:
+            file_list = ['%s.%s.%s.nc' % (args.input, args.date, args.time)]
+        for f in file_list:
+            print("Downloading %s" % f)
+            sftp.get(f, localpath='/app/%s' % f, callback=progress)
+            return_list.append('/app/%s' % f)
+    transport.close()
+    print("Download done in %3.2f minutes" % ((time.time() - bt)/60.0))
+    return return_list
+
+def worker_main(args):
     interval = int(args.interval)
-    print(f'opening input {args.input}', flush=True)
+    print('opening input %s' % args.input)
     
     class_names = ['clear', 'cloudy', 'rain']
-    # First get the time period using act
+    file_list = download_data(args)
     
-    if args.time is None:
-        file_list = glob('/app/sgpdlacfC1.a1.%s*.nc.v0' % args.date)
-        file_name = file_list[-1]
-    else:
-        file_name = '/app/sgpdlacfC1.a1.%s.%s.nc.v0' % (args.date, args.time)
-
-    if file_name == '/app/sgpdlacfC1.a1.20170731.174445.nc.v0':
-        http = urllib3.PoolManager()
-        with open(file_name, mode='wb') as f:
-            r = http.request('GET',
-                'https://www.dropbox.com/s/3z07s2atqgcndxj/sgpdlacfC1.a1.20170731.174445.nc.v0?dl=0',
-                            preload_content=False)
-            shutil.copyfileobj(r, f)
-
     model = open_load_model(args.model)
-    if time is None:
-        file_list = glob('/app/sgpdlacfC1.a1.%s*.nc.v0' % args.date)
-        print(file_list)
-        if file_list == []:
-            download_data(args.date, args.time)
-        file_list = glob('/app/sgpdlacfC1.a1.%s*.nc.v0' % args.date)
+    for file_name in file_list:
         file_name = file_list[-1]
+        print("Processing %s" % file_name)
         input_ds = load_file(file_name)
         dsd_ds = process_file(input_ds)
         scp = get_scp(dsd_ds, args.model)
@@ -125,50 +141,11 @@ def worker_main(args, heartbeat):
             plugin.publish("weather.classifier.class",
                            class_names[int(out_predict[i])],
                            timestamp=scp['time_bins'][i])
-    else:
-        file_list = glob(file_name)
-        if file_list == []:
-            try:
-                download_data(args.date, args.time)
-                file_list = glob('/app/sgpdlacfC1.a1.%s*.nc.v0' % args.date)
-            except TypeError:
-                print("No files found.")
-                return
-        print(file_list)
-        file_name = file_list[-1]
-        input_ds = load_file(file_name)
-        dsd_ds = process_file(input_ds)
-        scp = get_scp(dsd_ds, args.model)
-        input_ds.close()
-        dsd_ds.close()
-        out_predict = model.predict(xgb.DMatrix(scp['input_array']))
-        for i in range(len(out_predict)):
-            print(str(scp['time_bins'][i]) + ':' + class_names[int(out_predict[i])])
-            plugin.publish("weather.classifier.class",
-                           class_names[int(out_predict[i])],
-                           timestamp=scp['time_bins'][i])
-
 
 def main(args):
     if args.verbose:
-        print('running in a verbose mode', flush=True)
-
-    heartbeat = multiprocessing.Queue()
-    worker = multiprocessing.Process(
-        target=worker_main, args=(args, heartbeat))
-    #model = open_load_model(args.model)
-    #worker_main(args)
-
-    try:
-        worker.start()
-        while True:
-            heartbeat.get(timeout=180)  # throws an exception on timeout
-    except Exception:
-        pass
-
-    # if we reach this point, the worker process has stopped
-    worker.terminate()
-    raise RuntimeError('worker is no longer responding')
+        print('running in a verbose mode')
+    worker_main(args)
 
 
 if __name__ == '__main__':
@@ -179,8 +156,8 @@ if __name__ == '__main__':
         action='store_true', help='Verbose')
     parser.add_argument(
         '--input', dest='input',
-        action='store', default='sgpdlacfC1.a1',
-        help='Path to input device or stream')
+        action='store', default='sgpdlacfS01.a1',
+        help='Path to input device or ARM datastream name')
     parser.add_argument(
         '--model', dest='model',
         action='store', default='/app/modelsnrgt3.000000snrgt5.000000.json',
@@ -190,10 +167,10 @@ if __name__ == '__main__':
         action='store', default=0,
         help='Time interval in seconds')
     parser.add_argument('--date', dest='date', action='store',
-                        default='20170731',
-                        help='Date of record to pull')
+                        default=None,
+                        help='Date of record to pull in (YYYY-MM-DD)')
     parser.add_argument('--time', dest='time', action='store',
-                        default='174445', help='Time of record to pull',
+                        default=None, help='Time of record to pull',
                         type=ascii)
 
 
