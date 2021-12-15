@@ -13,6 +13,7 @@ import multiprocessing
 import os
 import base64
 import paramiko
+import json
 
 import waggle.plugin as plugin
 
@@ -61,7 +62,6 @@ def get_scp(ds, model_name, interval=5):
             scp_ds['snrgt%f' % snr_thresholds[-1]] = np.zeros(
                     (len(dates) - 1, len(range_bins) - 1))
             mname = mname[locs+13:]
-    print((len(dates) - 1, len(range_bins) - 1))
     
     for i in range(len(dates) - 1):
         time_inds = np.argwhere(np.logical_and(ds.time.values >= dates[i],
@@ -98,6 +98,7 @@ def download_data(args):
     passwd = base64.b64decode("S3VyQGRvMjM=".encode("utf-8"))
     transport = paramiko.Transport('emerald.adc.arm.gov', 22)
     username = 'rjackson'
+    
     transport.connect(username=username, password=passwd)
     return_list = []
     with paramiko.SFTPClient.from_transport(transport) as sftp:
@@ -112,6 +113,8 @@ def download_data(args):
         else:
             file_list = ['%s.%s.%s.nc' % (args.input, args.date, args.time)]
         for f in file_list:
+            if os.path.exists('/app/%s' % f):
+                continue
             print("Downloading %s" % f)
             sftp.get(f, localpath='/app/%s' % f, callback=progress)
             return_list.append('/app/%s' % f)
@@ -119,10 +122,9 @@ def download_data(args):
     print("Download done in %3.2f minutes" % ((time.time() - bt)/60.0))
     return return_list
 
-def worker_main(args):
+def worker_main(args, plugin):
     interval = int(args.interval)
     print('opening input %s' % args.input)
-    
     class_names = ['clear', 'cloudy', 'rain']
     file_list = download_data(args)
     
@@ -141,15 +143,20 @@ def worker_main(args):
             plugin.publish("weather.classifier.class",
                            class_names[int(out_predict[i])],
                            timestamp=scp['time_bins'][i])
-
+         
+    
 def main(args):
     if args.verbose:
         print('running in a verbose mode')
-    worker_main(args)
+    while True:
+        worker_main(args, plugin)
+        if args.date is not None:
+            break
 
 
 if __name__ == '__main__':
     plugin.init()
+    plugin.subscribe("weather.classifier.class")
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--verbose', dest='verbose',
@@ -172,6 +179,5 @@ if __name__ == '__main__':
     parser.add_argument('--time', dest='time', action='store',
                         default=None, help='Time of record to pull',
                         type=ascii)
-
 
     main(parser.parse_args())
