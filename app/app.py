@@ -148,12 +148,9 @@ def worker_main(args, plugin):
 def main(args):
     if args.verbose:
         print('running in a verbose mode')
-    while True:
-        worker_main(args, plugin)
-        if args.date is not None:
-            break
+    worker_main(args, plugin)
 
-
+    
 if __name__ == '__main__':
     plugin.init()
     plugin.subscribe("weather.classifier.class")
