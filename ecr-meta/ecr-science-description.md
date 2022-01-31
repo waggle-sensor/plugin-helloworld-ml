@@ -7,7 +7,7 @@ of Doppler spectra from a vertically pointing Doppler lidar over SGP takes 1.2 G
 analyses of these spectra while including all data is an impossibly large task. However, if we can
 filter out the data to only include time periods of interest to cloud modellers, this would vastly
 reduce the amount of data throughput while adding more information about the clouds than what is currently
-included in the ARM Archive. Therefore, this motived the development of a weather classifier for the vertically
+included in the ARM Archive. Therefore, this motivated the development of a weather classifier for the vertically
 pointing ARM Doppler Lidar.
 
 This classifier will classify raw ARM Doppler Lidar data into three categories: clear, cloudy, and rainy. The algorithm 

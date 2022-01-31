@@ -150,7 +150,7 @@ def main(args):
         print('running in a verbose mode')
     worker_main(args, plugin)
 
-    
+
 if __name__ == '__main__':
     plugin.init()
     plugin.subscribe("weather.classifier.class")
@@ -160,7 +160,7 @@ if __name__ == '__main__':
         action='store_true', help='Verbose')
     parser.add_argument(
         '--input', dest='input',
-        action='store', default='sgpdlacfS01.a1',
+        action='store', default='sgpdlacfC1.a1',
         help='Path to input device or ARM datastream name')
     parser.add_argument(
         '--model', dest='model',
