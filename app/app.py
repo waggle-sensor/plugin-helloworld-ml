@@ -30,7 +30,7 @@ def open_load_model(model_path):
 
 
 def load_file(file_path):
-    test_file = highiq.io.read_00_data([file_path])
+    test_file = highiq.io.read_00_data(file_path, 'sgpdlprofcalC1.home_point')
     return test_file
 
 

@@ -1,0 +1,26 @@
+# This is a configuration for processing Doppler lidar data. This file contains position information
+# about the (hard) target that is used for calibrating the lidar scanner's home position.
+# The target is typically a narrow well defined feature that pokes above the horizon, and is well
+# within the range of the lidar return signal. User5 scans are fine resolution PPI scans that are performed
+# over a limited sector in the general direction of the target. The intensity field in these scans is
+# used to determine the azimuth of the target relative to the lidar's current orientation. This information
+# is then used to determine the azimuth of the lidar scanner's home position relative to true north.
+# The latitude and longitude of the target must be given with sufficient precision to determine
+# the target position within about 3 m.
+#
+# start_time (yyyymmddhh), end_time (yyyymmddhh), Target_latitude, Target_longitude, target_altitude, lidar_latitude, lidar_longitude, lidar_altitude, lidar_home_point, Descriptive comment
+# 
+# Where
+#	end_time =			-1 means the values are current
+# 	Target_latitude =		Latitude of the target in degrees North
+# 	Target_longitude =		Longitude of the target in degrees East
+# 	Target_altitude =		Surface altitude at the target lat and lon in meters
+# 	lidar_latitude =		Latitude of the lidar in degrees North
+# 	lidar_longitude =		Longitude of the lidar in degrees East
+# 	lidar_altitude =		Surface altitude at the lidar lat and lon in meters
+# 	lidar_home_point =		Azimuth of the lidar home point (deg)
+#
+# Parameters must be comma delimited
+2011080100,         -1, 36.60574, -97.48876, 315.0,  36.60529, -97.48652, 316.0,  1.00, Slight adjust for drift compensation
+2011040100, 2011073123, 36.60574, -97.48876, 315.0,  36.60529, -97.48652, 316.0,  1.15, Target=60-m tower, Lidar next to 915
+2010102019, 2011033123, 36.60574, -97.48876, 315.0,  36.60545, -97.48579, 319.0, 269.7, Target=60-m tower, Lidar on GIF platform
