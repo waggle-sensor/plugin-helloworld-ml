@@ -30,8 +30,7 @@ def open_load_model(model_path):
 
 
 def load_file(file_path):
-    test_file = highiq.io.load_arm_netcdf([file_path])
-    test_file['complex'] = test_file['complex'] + 1
+    test_file = highiq.io.read_00_data([file_path])
     return test_file
 
 
@@ -115,6 +114,9 @@ def download_data(args):
         for f in file_list:
             if os.path.exists('/app/%s' % f):
                 continue
+            # Only process vertically pointing data for now
+            if not 'Stare' in f:
+                continue
             print("Downloading %s" % f)
             sftp.get(f, localpath='/app/%s' % f, callback=progress)
             return_list.append('/app/%s' % f)
@@ -160,7 +162,7 @@ if __name__ == '__main__':
         action='store_true', help='Verbose')
     parser.add_argument(
         '--input', dest='input',
-        action='store', default='sgpdlacfC1.a1',
+        action='store', default='sgpdlacfC1.00',
         help='Path to input device or ARM datastream name')
     parser.add_argument(
         '--model', dest='model',

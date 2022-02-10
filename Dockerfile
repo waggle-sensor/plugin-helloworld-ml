@@ -17,6 +17,7 @@ RUN pip3 install paramiko
 
 COPY app/ /app/
 COPY app/*.json /app/
+COPY *.home_point /app/
 WORKDIR /app
 
 ENTRYPOINT ["/usr/bin/python3", "/app/app.py"]
