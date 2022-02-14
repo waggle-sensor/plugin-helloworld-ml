@@ -37,7 +37,12 @@ def load_file(file_path):
 def process_file(ds):
     print("Processing lidar moments...")
     ti = time.time()
-    ds_out = highiq.calc.get_psd(ds)
+    my_list = []
+    for x in ds.groupby_bins('time', ds.time.values[::100]):
+        d = x[1]
+        d['acf_bkg'] = d['acf_bkg'].isel(time=1)
+        my_list.append(highiq.calc.get_psd(d))
+    ds_out = xr.concat(my_list, dim='time')
     ds_out = highiq.calc.get_lidar_moments(ds_out)
     print("Done in %3.2f minutes" % ((time.time() - ti) / 60.))
     return ds_out
