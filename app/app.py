@@ -14,7 +14,7 @@ import os
 import base64
 import paramiko
 import json
-
+import xarray as xr
 import waggle.plugin as plugin
 
 from datetime import datetime
@@ -37,7 +37,13 @@ def load_file(file_path):
 def process_file(ds):
     print("Processing lidar moments...")
     ti = time.time()
-    ds_out = highiq.calc.get_psd(ds)
+    my_list = []
+    i = 0
+    for x in ds.groupby_bins('time', ds.time.values[::100]):
+        d = x[1]
+        d['acf_bkg'] = d['acf_bkg'].isel(time=1)
+        my_list.append(highiq.calc.get_psd(d))
+    ds = xr.concat(my_list, dim='time')
     ds_out = highiq.calc.get_lidar_moments(ds_out)
     print("Done in %3.2f minutes" % ((time.time() - ti) / 60.))
     return ds_out
@@ -88,7 +94,7 @@ def get_scp(ds, model_name, interval=5):
 
 def progress(bytes_so_far: int, total_bytes: int):
     pct_complete = 100. * float(bytes_so_far) / float(total_bytes)
-    if int(pct_complete * 10) % 1000 == 0:
+    if int(pct_complete * 10) % 100 == 0:
         print("Total progress = %4.2f" % pct_complete)  
 
 
@@ -114,6 +120,7 @@ def download_data(args):
         for f in file_list:
             if os.path.exists('/app/%s' % f):
                 continue
+            
             # Only process vertically pointing data for now
             if not 'Stare' in f:
                 continue
@@ -138,14 +145,24 @@ def worker_main(args, plugin):
         dsd_ds = process_file(input_ds)
         scp = get_scp(dsd_ds, args.model)
         input_ds.close()
-        dsd_ds.close()
         out_predict = model.predict(xgb.DMatrix(scp['input_array']))
         for i in range(len(out_predict)):
-            print(str(scp['time_bins'][i]) + ':' + class_names[int(out_predict[i])])
+            print(str(
+                scp['time_bins'][i]) + ':' + class_names[int(out_predict[i])])
             plugin.publish("weather.classifier.class",
                            class_names[int(out_predict[i])],
                            timestamp=scp['time_bins'][i])
+        
+            if out_predict[i] > 0:
+                out_ds = dsd_ds.sel(time=slice(
+                    str(scp['time_bins'][i]), str(scp['time_bins'][i+1])))
+                t = pd.to_datetime(out_ds.time.values[0])
+                out_ds.to_netcdf('%s.nc' % 
+                    t.strftime('%Y%m%d.%H%M%S'))
+                 
+        dsd_ds.close() 
          
+
     
 def main(args):
     if args.verbose:
