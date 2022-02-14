@@ -61,6 +61,16 @@ over five minute time periods.
 weather.classifier.class: The three classifications supported are
 currently 'clear', 'cloudy', and 'rainy'.
 
+# Inferences from Sage Codes
+
+To query the output classification from the plugin, simply do:
+
+    import sage_data_client
+
+    df = sage_data_client.query(start="-120m",
+        filter={"name": "weather.classifier.class"}
+    )
+    print(df)
 
 # Reference
 
