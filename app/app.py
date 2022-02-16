@@ -31,19 +31,23 @@ def open_load_model(model_path):
 
 def load_file(file_path):
     test_file = highiq.io.read_00_data(file_path, 'sgpdlprofcalC1.home_point')
+    test_file.to_netcdf('test.nc')
+    del test_file
+    test_file = xr.open_dataset('test.nc')
     return test_file
-
 
 def process_file(ds):
     print("Processing lidar moments...")
     ti = time.time()
     my_list = []
-    for x in ds.groupby_bins('time', ds.time.values[::100]):
+    for x in ds.groupby_bins('time', ds.time.values[::50]):
         d = x[1]
         d['acf_bkg'] = d['acf_bkg'].isel(time=1)
-        my_list.append(highiq.calc.get_psd(d))
+        psd = highiq.calc.get_psd(d)
+        my_list.append(highiq.calc.get_lidar_moments(psd))
+        del psd
     ds_out = xr.concat(my_list, dim='time')
-    ds_out = highiq.calc.get_lidar_moments(ds_out)
+
     print("Done in %3.2f minutes" % ((time.time() - ti) / 60.))
     return ds_out
 
