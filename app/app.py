@@ -40,7 +40,7 @@ def process_file(ds):
     print("Processing lidar moments...")
     ti = time.time()
     my_list = []
-    for x in ds.groupby_bins('time', ds.time.values[::50]):
+    for x in ds.groupby_bins('time', ds.time.values[::5]):
         d = x[1]
         d['acf_bkg'] = d['acf_bkg'].isel(time=1)
         psd = highiq.calc.get_psd(d)
@@ -106,13 +106,13 @@ def download_data(args):
     passwd = base64.b64decode("S3VyQGRvMjM=".encode("utf-8"))
     transport = paramiko.Transport('emerald.adc.arm.gov', 22)
     username = 'rjackson'
-    
+
     transport.connect(username=username, password=passwd)
     return_list = []
     with paramiko.SFTPClient.from_transport(transport) as sftp:
         sftp.chdir('/data/datastream/sgp/%s' % args.input)
         if args.date is None and args.time is None:
-            file_list = [sorted(sftp.listdir())[-1]]
+            file_list = sorted(sftp.listdir())[-6:-1]
         elif args.time is None:
             file_list = sorted(sftp.listdir())
             for f in file_list:
@@ -120,18 +120,22 @@ def download_data(args):
                     file_list.remove(f)
         else:
             file_list = ['%s.%s.%s.nc' % (args.input, args.date, args.time)]
+
         for f in file_list:
+            print(f)
             if os.path.exists('/app/%s' % f):
                 continue
+
             # Only process vertically pointing data for now
-            if not 'Stare' in f:
+            if not 'Stare' in f and not '0000.raw' in f:
                 continue
             print("Downloading %s" % f)
             sftp.get(f, localpath='/app/%s' % f, callback=progress)
-            return_list.append('/app/%s' % f)
+            return_list = '/app/%s' % f
     transport.close()
     print("Download done in %3.2f minutes" % ((time.time() - bt)/60.0))
     return return_list
+
 
 def worker_main(args, plugin):
     interval = int(args.interval)
