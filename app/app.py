@@ -112,7 +112,7 @@ def download_data(args):
     with paramiko.SFTPClient.from_transport(transport) as sftp:
         sftp.chdir('/data/datastream/sgp/%s' % args.input)
         if args.date is None and args.time is None:
-            file_list = sorted(sftp.listdir())[-6:-1]
+            file_list = sorted(sftp.listdir())[-5:]
         elif args.time is None:
             file_list = sorted(sftp.listdir())
             for f in file_list:
@@ -120,7 +120,7 @@ def download_data(args):
                     file_list.remove(f)
         else:
             file_list = ['%s.%s.%s.nc' % (args.input, args.date, args.time)]
-
+        last_file = ""
         for f in file_list:
             print(f)
             if os.path.exists('/app/%s' % f):
@@ -130,8 +130,10 @@ def download_data(args):
             if not 'Stare' in f and not '0000.raw' in f:
                 continue
             print("Downloading %s" % f)
-            sftp.get(f, localpath='/app/%s' % f, callback=progress)
             return_list = '/app/%s' % f
+            last_file = f
+        sftp.get(last_file, localpath='/app/%s' % last_file, callback=progress)
+
     transport.close()
     print("Download done in %3.2f minutes" % ((time.time() - bt)/60.0))
     return return_list
@@ -145,7 +147,7 @@ def worker_main(args, plugin):
     
     model = open_load_model(args.model)
     for file_name in file_list:
-        file_name = file_list[-1]
+        file_name = file_list
         print("Processing %s" % file_name)
         input_ds = load_file(file_name)
         dsd_ds = process_file(input_ds)
