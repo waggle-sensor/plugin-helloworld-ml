@@ -104,7 +104,7 @@ def progress(bytes_so_far: int, total_bytes: int):
 def download_data(args):
     bt = time.time()
     passwd = base64.b64decode("S3VyQGRvMjM=".encode("utf-8"))
-    transport = paramiko.Transport('emerald.adc.arm.gov', 22)
+    transport = paramiko.Transport('research.arm.gov', 22)
     username = 'rjackson'
 
     transport.connect(username=username, password=passwd)
