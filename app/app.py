@@ -249,7 +249,6 @@ def main(args):
 
 if __name__ == '__main__':
     plugin.init()
-    plugin.subscribe("weather.classifier.class")
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--verbose', dest='verbose',
