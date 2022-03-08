@@ -1,25 +1,17 @@
 import numpy as np
 import xgboost as xgb
 import xarray as xr
-import act
-import highiq
 import pandas as pd
 import time
-import datetime
 import argparse
-import urllib3
-import shutil
-import multiprocessing
 import os
 import base64
 import paramiko
 import json
 import xarray as xr
-import waggle.plugin as plugin
 
-from datetime import datetime
-from itertools import compress
-from glob import glob
+import waggle.plugin as plugin
+from datetime import datetime, timedelta
 
 
 def open_load_model(model_path):
@@ -28,25 +20,109 @@ def open_load_model(model_path):
     bst.load_model(model_path)
     return bst
 
-
 def load_file(file_path):
-    test_file = highiq.io.read_00_data(file_path, 'sgpdlprofcalC1.home_point')
+    with open(file_path, mode='r') as file_buf:
+        fname = file_buf.readline()
+        system_id = file_buf.readline()
+        number_of_gates = file_buf.readline()
+        number_of_gates = int(number_of_gates.split()[-1])
+        gate_length = file_buf.readline()
+        gate_length = float(gate_length.split()[-1])
+        gate_length_pts = file_buf.readline()
+        gate_length_pts = int(gate_length_pts.split()[-1])
+        pulses_per_ray = file_buf.readline()
+        pulses_per_ray = int(pulses_per_ray.split()[-1])
+        num_rays = file_buf.readline()
+        num_rays = int(num_rays.split()[-1])
+        scan_type = file_buf.readline()
+        focus_range = file_buf.readline()
+        start_time = file_buf.readline()
+
+        start_time = datetime.strptime(start_time[:-4],
+            "Start time:	%Y%m%d %H:%M:%S")
+        resolution = file_buf.readline()
+        resolution = float(resolution.split()[-1])
+        altitude = file_buf.readline()
+        dataline1 = file_buf.readline()
+        dataline1 = file_buf.readline()
+        dataline2 = file_buf.readline()
+        dataline1 = file_buf.readline()
+        skip = file_buf.readline()
+        times = []
+        snrs = []
+        betas = []
+        velocities = []
+        azimuths = []
+        elevations = []
+        pitches = []
+        rolls = []
+        while True:
+            file_line = file_buf.readline()
+            if not file_line:
+                break
+            split_line = file_line.split()
+            times.append(datetime(
+                start_time.year, start_time.month, start_time.day, 0, 0, 0) +
+                            timedelta(hours=float(split_line[0])))
+            azimuths.append(float(split_line[1]))
+            elevations.append(float(split_line[2]))
+            pitches.append(float(split_line[3]))
+            rolls.append(float(split_line[4]))
+            string_buf = []
+            for i in range(number_of_gates):
+                string_buf.append(file_buf.readline())
+            string_buf = io.StringIO("\n".join(string_buf))
+            input_data = pd.read_csv(string_buf, nrows=number_of_gates,
+                    delim_whitespace=True,
+                    header=None, names=["gate_no", "velocity", "intensity", "beta"])
+
+            velocities.append(input_data.values[:, 1])
+            snrs.append(input_data.values[:, 2] - 1)
+            betas.append(input_data.values[:, 3])
+
+    ranges = (np.arange(0, number_of_gates, 1) + 0.5) * gate_length
+    azimuths = np.array(azimuths)
+    elevations = np.array(elevations)
+    pitches = np.array(pitches)
+    rolls = np.array(rolls)
+    velocities = np.stack(velocities)
+    snrs = np.stack(snrs)
+    betas = np.stack(betas)
+    times = np.array(times)
+    times = xr.DataArray(times, dims=['time'])
+    ranges = xr.DataArray(ranges, dims=['range'])
+
+    azimuths = xr.DataArray(azimuths, dims=['time'])
+    azimuths.attrs["long_name"] = "Azimuth angle"
+    azimuths.attrs["units"] = "degree"
+    elevations = xr.DataArray(elevations, dims=['time'])
+    elevations.attrs["long_name"] = "Elevation angle"
+    elevations.attrs["units"] = "degree"
+    pitches = xr.DataArray(pitches, dims=['time'])
+    pitches.attrs["long_name"] = "Pitch angle"
+    pitches.attrs["units"] = "degree"
+    rolls = xr.DataArray(rolls, dims=['time'])
+    rolls.attrs["long_name"] = "Roll angle"
+    rolls.attrs["units"] = "degree"
+    velocities = xr.DataArray(velocities, dims=['time', 'range'])
+    velocities.attrs["long_name"] = "Mean Doppler velocity"
+    velocities.attrs["units"] = "m/s"
+    snr = xr.DataArray(snrs, dims=['time', 'range'])
+    snr.attrs["long_name"] = "Signal to noise ratio"
+    snr.attrs["units"] = "dB"
+    betas = xr.DataArray(betas, dims=['time', 'range'])
+    betas.attrs["long_name"] = "Extinction coefficient"
+    betas.attrs["units"] = "km-1"
+    test_file = xr.Dataset({'azimuth': azimuths,
+                            'elevation': elevations,
+                            'pitch': pitches,
+                            'roll': rolls,
+                            'doppler_velocity': velocities,
+                            'snr': snr,
+                            'beta': betas,
+                            'time': times,
+                            'range': ranges})
     return test_file
-
-
-def process_file(ds):
-    print("Processing lidar moments...")
-    ti = time.time()
-    my_list = []
-    i = 0
-    for x in ds.groupby_bins('time', ds.time.values[::100]):
-        d = x[1]
-        d['acf_bkg'] = d['acf_bkg'].isel(time=1)
-        my_list.append(highiq.calc.get_psd(d))
-    ds = xr.concat(my_list, dim='time')
-    ds_out = highiq.calc.get_lidar_moments(ds_out)
-    print("Done in %3.2f minutes" % ((time.time() - ti) / 60.))
-    return ds_out
 
 
 def get_scp(ds, model_name, interval=5):
@@ -101,15 +177,15 @@ def progress(bytes_so_far: int, total_bytes: int):
 def download_data(args):
     bt = time.time()
     passwd = base64.b64decode("S3VyQGRvMjM=".encode("utf-8"))
-    transport = paramiko.Transport('emerald.adc.arm.gov', 22)
+    transport = paramiko.Transport('research.adc.arm.gov', 22)
     username = 'rjackson'
-    
+
     transport.connect(username=username, password=passwd)
     return_list = []
     with paramiko.SFTPClient.from_transport(transport) as sftp:
         sftp.chdir('/data/datastream/sgp/%s' % args.input)
         if args.date is None and args.time is None:
-            file_list = [sorted(sftp.listdir())[-1]]
+            file_list = sorted(sftp.listdir())[-5:]
         elif args.time is None:
             file_list = sorted(sftp.listdir())
             for f in file_list:
@@ -117,19 +193,25 @@ def download_data(args):
                     file_list.remove(f)
         else:
             file_list = ['%s.%s.%s.nc' % (args.input, args.date, args.time)]
+        last_file = ""
         for f in file_list:
+            print(f)
             if os.path.exists('/app/%s' % f):
                 continue
             
+
             # Only process vertically pointing data for now
             if not 'Stare' in f:
                 continue
             print("Downloading %s" % f)
-            sftp.get(f, localpath='/app/%s' % f, callback=progress)
-            return_list.append('/app/%s' % f)
+            return_list = '/app/%s' % f
+            last_file = f
+        sftp.get(last_file, localpath='/app/%s' % last_file, callback=progress)
+
     transport.close()
     print("Download done in %3.2f minutes" % ((time.time() - bt)/60.0))
     return return_list
+
 
 def worker_main(args, plugin):
     interval = int(args.interval)
@@ -139,10 +221,9 @@ def worker_main(args, plugin):
     
     model = open_load_model(args.model)
     for file_name in file_list:
-        file_name = file_list[-1]
+        file_name = file_list
         print("Processing %s" % file_name)
-        input_ds = load_file(file_name)
-        dsd_ds = process_file(input_ds)
+        dsd_ds = load_file(file_name)
         scp = get_scp(dsd_ds, args.model)
         input_ds.close()
         out_predict = model.predict(xgb.DMatrix(scp['input_array']))
@@ -179,7 +260,7 @@ if __name__ == '__main__':
         action='store_true', help='Verbose')
     parser.add_argument(
         '--input', dest='input',
-        action='store', default='sgpdlacfC1.00',
+        action='store', default='sgpdlC1.00',
         help='Path to input device or ARM datastream name')
     parser.add_argument(
         '--model', dest='model',
