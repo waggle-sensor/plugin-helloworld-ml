@@ -219,8 +219,7 @@ def worker_main(args, plugin):
     for file_name in file_list:
         file_name = file_list
         print("Processing %s" % file_name)
-        input_ds = load_file(file_name)
-        dsd_ds = process_file(input_ds)
+        dsd_ds = load_file(file_name)
         scp = get_scp(dsd_ds, args.model)
         input_ds.close()
         dsd_ds.close()
