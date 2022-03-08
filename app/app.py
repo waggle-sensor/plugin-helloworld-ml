@@ -9,6 +9,7 @@ import base64
 import paramiko
 import json
 import xarray as xr
+import io
 
 import waggle.plugin as plugin
 from datetime import datetime, timedelta
@@ -199,7 +200,6 @@ def download_data(args):
             if os.path.exists('/app/%s' % f):
                 continue
             
-
             # Only process vertically pointing data for now
             if not 'Stare' in f:
                 continue
@@ -217,34 +217,30 @@ def worker_main(args, plugin):
     interval = int(args.interval)
     print('opening input %s' % args.input)
     class_names = ['clear', 'cloudy', 'rain']
-    file_list = download_data(args)
+    file_name = download_data(args)
     
     model = open_load_model(args.model)
-    for file_name in file_list:
-        file_name = file_list
-        print("Processing %s" % file_name)
-        dsd_ds = load_file(file_name)
-        scp = get_scp(dsd_ds, args.model)
-        input_ds.close()
-        out_predict = model.predict(xgb.DMatrix(scp['input_array']))
-        for i in range(len(out_predict)):
-            print(str(
-                scp['time_bins'][i]) + ':' + class_names[int(out_predict[i])])
-            plugin.publish("weather.classifier.class",
-                           class_names[int(out_predict[i])],
-                           timestamp=scp['time_bins'][i])
+    print("Processing %s" % file_name)
+    dsd_ds = load_file(file_name)
+    scp = get_scp(dsd_ds, args.model)
+    out_predict = model.predict(xgb.DMatrix(scp['input_array']))
+    for i in range(len(out_predict)):
+        print(str(
+            scp['time_bins'][i]) + ':' + class_names[int(out_predict[i])])
+        plugin.publish("weather.classifier.class",
+                        class_names[int(out_predict[i])],
+                        timestamp=scp['time_bins'][i])
         
-            if out_predict[i] > 0:
-                out_ds = dsd_ds.sel(time=slice(
-                    str(scp['time_bins'][i]), str(scp['time_bins'][i+1])))
-                t = pd.to_datetime(out_ds.time.values[0])
-                out_ds.to_netcdf('%s.nc' % 
-                    t.strftime('%Y%m%d.%H%M%S'))
+        if out_predict[i] > 0:
+            out_ds = dsd_ds.sel(time=slice(
+                str(scp['time_bins'][i]), str(scp['time_bins'][i+1])))
+            t = pd.to_datetime(out_ds.time.values[0])
+            out_ds.to_netcdf('%s.nc' % 
+                t.strftime('%Y%m%d.%H%M%S'))
                  
-        dsd_ds.close() 
+    dsd_ds.close() 
          
-
-    
+ 
 def main(args):
     if args.verbose:
         print('running in a verbose mode')
