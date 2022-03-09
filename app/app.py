@@ -14,6 +14,11 @@ import io
 import waggle.plugin as plugin
 from datetime import datetime, timedelta
 
+# 1. import standard logging module
+import logging
+
+# 2. enable debug logging
+logging.basicConfig(level=logging.DEBUG)
 
 def open_load_model(model_path):
     print(model_path)
@@ -225,11 +230,12 @@ def worker_main(args, plugin):
     scp = get_scp(dsd_ds, args.model)
     out_predict = model.predict(xgb.DMatrix(scp['input_array']))
     for i in range(len(out_predict)):
+        print(scp['time_bins'][i].timestamp())
         print(str(
             scp['time_bins'][i]) + ':' + class_names[int(out_predict[i])])
         plugin.publish("weather.classifier.class",
-                        class_names[int(out_predict[i])],
-                        timestamp=scp['time_bins'][i])
+                        out_predict[i],
+                        timestamp=scp['time_bins'][i].timestamp())
         
         if out_predict[i] > 0:
             out_ds = dsd_ds.sel(time=slice(
