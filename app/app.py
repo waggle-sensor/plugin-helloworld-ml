@@ -54,7 +54,7 @@ def process_file(ds):
 
 def get_scp(ds, model_name, interval=5):
     range_bins = np.arange(60., 11280., 120.)
-    # Parse model string for locations of snr, mean_velocity, spectral_width
+    # Parse model strings for locations of snr, mean_velocity, spectral_width
     locs = 0
     snr_thresholds = []
     scp_ds = {}
