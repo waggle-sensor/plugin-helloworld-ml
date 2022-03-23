@@ -1,6 +1,6 @@
 name: "weatherclassification"
 description: "An app for identifying cloud or rain coverage from the ARM Doppler Lidar."
-version: "1.0.13"
+version: "1.0.14"
 namespace: "sage"
 authors: "Robert Jackson <rjackson@anl.gov>"
 collaborators: "Bhupendra Raut, Dario Dematties Reyes, Joseph Swantek, Neal Conrad, Nicola Ferrier, Pete Beckman, Raj Sankaran, Robert Jackson, Scott Collis, Sean Shahkarami, Seongha Park, Sergey Shemyakin, Wolfgang Gerlach, Yongho kim"
