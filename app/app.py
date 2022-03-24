@@ -159,7 +159,7 @@ def worker_main(args, plugin):
         
         if out_predict[i] > 0:
             out_ds = dsd_ds.sel(time=slice(
-                str(scp['time_bins'][i]), str(scp['time_bins'][i+1])))
+                str(scp['time_bins'][i]), str(scp['time_bins'][i+1])), method='nearest')
             t = pd.to_datetime(out_ds.time.values[0])
             out_ds.to_netcdf('%s.nc' % 
                 t.strftime('%Y%m%d.%H%M%S'))
