@@ -2,6 +2,7 @@ import numpy as np
 import xgboost as xgb
 import xarray as xr
 import pandas as pd
+import highiq
 import time
 import argparse
 import os
