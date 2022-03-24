@@ -12,6 +12,7 @@ RUN pip3 install xarray
 RUN pip3 install cftime
 RUN pip3 install xgboost
 RUN pip3 install paramiko
+RUN pip3 install highiq
 
 COPY app/ /app/
 COPY app/*.json /app/
