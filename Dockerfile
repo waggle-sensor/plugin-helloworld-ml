@@ -14,8 +14,9 @@ RUN pip3 install xgboost
 RUN pip3 install paramiko
 RUN pip3 install highiq
 
-RUN cd $LD_LIBRARY_PATH
-RUN sudo ln libcusolver.so.11 libcusolver.so.10
+RUN cd /usr/local/cuda-11.0/lib64
+RUN ln -s libcusolver.so.10 libcusolver.so.11
+RUN cd /
 
 COPY app/ /app/
 COPY app/*.json /app/
