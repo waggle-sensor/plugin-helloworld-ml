@@ -17,6 +17,8 @@ RUN pip3 install highiq
 RUN cd /usr/local/cuda-11.0/lib64
 RUN ln -s libcusolver.so.10 libcusolver.so.11
 RUN cd /
+ENV LD_LIBRARY_PATH="/usr/local/cuda-11.0/lib64;${LD_LIBRARY_PATH}"
+RUN echo $LD_LIBRARY_PATH
 
 COPY app/ /app/
 COPY app/*.json /app/
