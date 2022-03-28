@@ -7,7 +7,6 @@ RUN apt-get install -y libgeos-dev
 RUN apt-get install -y python3-tk
 RUN apt-get install -y python3-nacl
 
-RUN pip3 install --upgrade tensorflow
 RUN pip3 install shapely
 RUN pip3 install xarray
 RUN pip3 install cftime
