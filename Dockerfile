@@ -15,6 +15,7 @@ RUN pip3 install xgboost
 RUN pip3 install paramiko
 RUN pip3 install highiq
 
+RUN ln -s /usr/local/cuda-11.0/targets/x86_64-linux/lib/libcusolver.so.10 /usr/local/cuda-11.0/targets/x86_64-linux/lib/libcusolver.so.11
 COPY app/ /app/
 COPY app/*.json /app/
 COPY *.home_point /app/
