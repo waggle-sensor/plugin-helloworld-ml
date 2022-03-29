@@ -125,7 +125,7 @@ def download_data(args):
                 continue
             
             # Only process vertically pointing data for now
-            if not 'Stare' in f and not '0000.raw' in f:
+            if not 'Stare' in f:
                 continue
             print("Downloading %s" % f)
             return_list = '/app/%s' % f
