@@ -19,7 +19,7 @@ from datetime import datetime, timedelta
 import logging
 
 # 2. enable debug logging
-logging.basicConfig(level=logging.DEBUG)
+#logging.basicConfig(level=logging.DEBUG)
 
 def open_load_model(model_path):
     print(model_path)
@@ -50,14 +50,20 @@ def process_file(ds):
     return ds_out
 
 
-def get_scp(ds, model_name, interval=5):
+def get_scp(ds, model_name, config, interval=5):
     range_bins = np.arange(60., 11280., 120.)
     # Parse model string for locations of snr, mean_velocity, spectral_width
     locs = 0
     snr_thresholds = []
     scp_ds = {}
-    dates = pd.date_range(ds.time.values[0],
+    if config == "Stare":
+        interval = 5
+        dates = pd.date_range(ds.time.values[0],
                           ds.time.values[-1], freq='%dmin' % interval)
+    else:
+        dates = pd.date_range(ds.time.values[0],
+                          ds.time.values[-1], periods=2)
+
     times = ds.time.values
     snr = ds['snr'].values
     mname = model_name
@@ -99,7 +105,7 @@ def progress(bytes_so_far: int, total_bytes: int):
         print("Total progress = %4.2f" % pct_complete)  
 
 
-def download_data(args):
+def download_data(args, file_name):
     bt = time.time()
     passwd = base64.b64decode("S3VyQGRvMjM=".encode("utf-8"))
     transport = paramiko.Transport('research.adc.arm.gov', 22)
@@ -125,11 +131,13 @@ def download_data(args):
                 continue
             
             # Only process vertically pointing data for now
-            if not 'Stare' in f:
+            if not args.config in f:
                 continue
             print("Downloading %s" % f)
             return_list = '/app/%s' % f
             last_file = f
+        if last_file == file_name:
+            return []
         sftp.get(last_file, localpath='/app/%s' % last_file, callback=progress)
 
     transport.close()
@@ -140,30 +148,31 @@ def download_data(args):
 def worker_main(args, plugin):
     interval = int(args.interval)
     print('opening input %s' % args.input)
-    class_names = ['clear', 'cloudy', 'rain']
-    file_name = download_data(args)
-    
-    model = open_load_model(args.model)
-    print("Processing %s" % file_name)
-    dsd_ds = load_file(file_name)
-    dsd_ds = process_file(dsd_ds)
-    scp = get_scp(dsd_ds, args.model)
-    out_predict = model.predict(xgb.DMatrix(scp['input_array']))
-    for i in range(len(out_predict)):
-        print(scp['time_bins'][i].timestamp())
-        print(str(
-            scp['time_bins'][i]) + ':' + class_names[int(out_predict[i])])
-        plugin.publish("weather.classifier.class",
-                        out_predict[i],
-                        timestamp=scp['time_bins'][i].timestamp())
-        
-        if out_predict[i] > 0:
-            out_ds = dsd_ds.sel(time=slice(
-                str(scp['time_bins'][i]), str(scp['time_bins'][i+1])), method='nearest')
-            t = pd.to_datetime(out_ds.time.values[0])
-            out_ds.to_netcdf('%s.nc' % 
-                t.strftime('%Y%m%d.%H%M%S'))
-                 
+    old_file = ""
+    run = True
+    while run:
+        class_names = ['clear', 'cloudy', 'rain']
+        file_name = download_data(args, old_file)
+        if file_name == []:
+            time.sleep(180)
+            continue
+        model = open_load_model(args.model)
+        print("Processing %s" % file_name)
+        dsd_ds = load_file(file_name)
+        dsd_ds = process_file(dsd_ds)
+        if args.config == "User5":
+            dsd_ds["range"] = dsd_ds["range"] * np.sin(np.pi / 3)
+        scp = get_scp(dsd_ds, args.model, args.config)
+        out_predict = model.predict(xgb.DMatrix(scp['input_array']))
+        for i in range(len(out_predict)):
+            print(scp['time_bins'][i].timestamp())
+            print(str(
+                scp['time_bins'][i]) + ':' + class_names[int(out_predict[i])])
+            plugin.publish("weather.classifier.class",
+                            out_predict[i],
+                            timestamp=scp['time_bins'][i].timestamp())
+        if args.loop == False:
+            run = False     
     dsd_ds.close() 
          
  
@@ -191,6 +200,13 @@ if __name__ == '__main__':
         '--interval', dest='interval',
         action='store', default=0,
         help='Time interval in seconds')
+    parser.add_argument(
+            '--loop', action='store_true')
+    parser.add_argument('--no-loop', action='store_false')
+    parser.set_defaults(loop=True)
+    parser.add_argument(
+            '--config', dest='config', action='store', default='User5',
+            help='Set to User5 for PPI or Stare for VPTs')
     parser.add_argument('--date', dest='date', action='store',
                         default=None,
                         help='Date of record to pull in (YYYY-MM-DD)')
