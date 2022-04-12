@@ -12,7 +12,7 @@ import json
 import xarray as xr
 import io
 
-import waggle.plugin as plugin
+from waggle.plugin import Plugin
 from datetime import datetime, timedelta
 
 # 1. import standard logging module
@@ -150,30 +150,31 @@ def worker_main(args, plugin):
     print('opening input %s' % args.input)
     old_file = ""
     run = True
-    while run:
-        class_names = ['clear', 'cloudy', 'rain']
-        file_name = download_data(args, old_file)
-        if file_name == []:
-            time.sleep(180)
-            continue
-        model = open_load_model(args.model)
-        print("Processing %s" % file_name)
-        dsd_ds = load_file(file_name)
-        dsd_ds = process_file(dsd_ds)
-        if args.config == "User5":
-            dsd_ds["range"] = dsd_ds["range"] * np.sin(np.pi / 3)
-        scp = get_scp(dsd_ds, args.model, args.config)
-        out_predict = model.predict(xgb.DMatrix(scp['input_array']))
-        for i in range(len(out_predict)):
-            print(scp['time_bins'][i].timestamp())
-            print(str(
-                scp['time_bins'][i]) + ':' + class_names[int(out_predict[i])])
-            plugin.publish("weather.classifier.class",
+    with Plugin() as plugin:
+        while run:
+            class_names = ['clear', 'cloudy', 'rain']
+            file_name = download_data(args, old_file)
+            if file_name == []:
+                time.sleep(180)
+                continue
+            model = open_load_model(args.model)
+            print("Processing %s" % file_name)
+            dsd_ds = load_file(file_name)
+            dsd_ds = process_file(dsd_ds)
+            if args.config == "User5":
+                dsd_ds["range"] = dsd_ds["range"] * np.sin(np.pi / 3)
+            scp = get_scp(dsd_ds, args.model, args.config)
+            out_predict = model.predict(xgb.DMatrix(scp['input_array']))
+            for i in range(len(out_predict)):
+                print(scp['time_bins'][i].timestamp())
+                print(str(
+                    scp['time_bins'][i]) + ':' + class_names[int(out_predict[i])])
+                    plugin.publish("weather.classifier.class",
                             out_predict[i],
                             timestamp=scp['time_bins'][i].timestamp())
-        if args.loop == False:
-            run = False     
-    dsd_ds.close() 
+            if args.loop == False:
+                run = False     
+        dsd_ds.close() 
          
  
 def main(args):
@@ -183,7 +184,6 @@ def main(args):
 
 
 if __name__ == '__main__':
-    plugin.init()
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--verbose', dest='verbose',
