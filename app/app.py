@@ -145,7 +145,7 @@ def download_data(args, file_name):
     return return_list
 
 
-def worker_main(args, plugin):
+def worker_main(args):
     interval = int(args.interval)
     print('opening input %s' % args.input)
     old_file = ""
@@ -166,12 +166,12 @@ def worker_main(args, plugin):
             scp = get_scp(dsd_ds, args.model, args.config)
             out_predict = model.predict(xgb.DMatrix(scp['input_array']))
             for i in range(len(out_predict)):
-                print(scp['time_bins'][i].timestamp())
+                tstamp = int(scp['time_bins'][i].timestamp() * 1e9)
                 print(str(
                     scp['time_bins'][i]) + ':' + class_names[int(out_predict[i])])
-                    plugin.publish("weather.classifier.class",
-                            out_predict[i],
-                            timestamp=scp['time_bins'][i].timestamp())
+                plugin.publish("weather.classifier.class",
+                            int(out_predict[i]),
+                            timestamp=tstamp)
             if args.loop == False:
                 run = False     
         dsd_ds.close() 
@@ -180,7 +180,7 @@ def worker_main(args, plugin):
 def main(args):
     if args.verbose:
         print('running in a verbose mode')
-    worker_main(args, plugin)
+    worker_main(args)
 
 
 if __name__ == '__main__':
