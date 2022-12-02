@@ -1,9 +1,9 @@
 import sage_data_client
 import time
 
-while True:
-    df = sage_data_client.query(start="-120m",
+
+df = sage_data_client.query(start="-168h",
         filter={"name": "weather.classifier.class"}
-    )
-    print(df)
-    time.sleep(60)
+)
+print(df)
+df.to_csv('classifications.csv')
