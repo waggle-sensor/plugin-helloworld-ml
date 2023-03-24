@@ -9,15 +9,18 @@ import base64
 import paramiko
 import xarray as xr
 import tensorflow as tf
+
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
+
 from waggle.plugin import Plugin
 from datetime import datetime, timedelta
 from scipy.signal import convolve2d
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.Model import load_model
+from tensorflow.keras.preprocessing.image import load_img
+
 from glob import glob
 # 1. import standard logging module
 import logging
@@ -33,7 +36,7 @@ def open_load_model(model_path):
     return bst
 
 def load_file(file_path):
-    test_file = xr.open_dataset(file_path)
+    test_file = highiq.io.load_arm_netcdf(file_path)
     return test_file
 
 def return_convolution_matrix(time_window, range_window):
@@ -65,29 +68,31 @@ def make_imgs(ds, config, interval=5):
     dates = pd.date_range(ds.time.values[0], ds.time.values[-1], freq='%dmin' % interval)
 
     times = ds.time.values
-    print(times)
     ranges = ds.range.values
-    ds['snr'] = ds['snr'] + 2 * np.log10(ranges + 1)
-    conv_matrix = return_convolution_matrix(5, 5)
-    snr_avg = convolve2d(ds['snr'].values, conv_matrix, mode='same')
-    ds['stddev'] = (('time', 'range'), np.sqrt(convolve2d(
-        (ds['snr'] - snr_avg) ** 2, conv_matrix, mode='same')))
-    Zn = ds.stddev.values
+    grid['snr'] = grid['snr'] + 2 * np.log10(ranges + 1)
+    snr_avg = convolve2d(grid['snr'].values, conv_matrix, mode='same')
+    grid['stddev'] = (('time', 'range'), np.sqrt(convolve2d((grid['snr'] - snr_avg) ** 2, conv_matrix, mode='same')))
+    Zn = grid.stddev.values
+
     cur_time = times[0]
     end_time = times[-1]
     time_list = []
     start_ind = 0
     i = 0
-    first_shape = None
+
     while cur_time < end_time:
         next_time = cur_time + np.timedelta64(interval, 'm')
+        print((next_time, end_time))
+
         if next_time > end_time:
             next_ind = len(times)
         else:
             next_ind = np.argmin(np.abs(next_time - times))
         if (start_ind >= next_ind):
             break
-        my_data = Zn[start_ind:next_ind, 0:150].T
+
+        my_data = Zn[start_ind:next_ind, 0:which_ranges[-1]].T
+
         my_times = times[start_ind:next_ind]
         if len(my_times) == 0:
             break
@@ -101,6 +106,10 @@ def make_imgs(ds, config, interval=5):
             elif my_data.shape[0] < first_shape[0]:
                 my_data = np.pad(my_data, [(0, first_shape[0] - my_data.shape[0]), (0, 0)],
                                  mode='constant')
+        if not os.path.exists('imgs'):
+            os.mkdir('imgs')
+
+        fname = 'imgs/%d.png' % i
 
         if not os.path.exists('/app/imgs/'):
             os.mkdir('/app/imgs')
@@ -114,7 +123,12 @@ def make_imgs(ds, config, interval=5):
         ax.pcolormesh(my_data, cmap='act_HomeyerRainbow', vmin=20, vmax=150)
         ax.set_axis_off()
         ax.margins(0, 0)
-        fig.savefig(fname, dpi=300, bbox_inches='tight', pad_inches=0)
+        try:
+            fig.savefig(fname, dpi=300, bbox_inches='tight', pad_inches=0)
+        except RuntimeError:
+            plt.close(fig)
+            continue
+
         plt.close(fig)
         i = i + 1
         del fig, ax
@@ -199,20 +213,23 @@ def worker_main(args):
                 time.sleep(180)
                 continue
             model = load_model(args.model)
+
             logging.debug("Processing %s" % file_name)
+
             dsd_ds = load_file(file_name)
             dsd_ds = process_file(dsd_ds)
             if args.config == "User5":
                 dsd_ds["range"] = dsd_ds["range"] * np.sin(np.pi / 3)
             time_list = make_imgs(dsd_ds, args.config)
             dsd_ds.close()
-            file_list = ImageDataGenerator()
+            file_list = glob('imgs/*.png')
             i = 0
-            img = file_list.flow_from_directory('/app/imgs', target_size=(96, 128))
-            out_predict = model.predict(img)
-            for i in range(len(out_predict)):
+            for fi in file_list:
+                img_gen = load_img(fi)
+                out_predict = model.predict(img_gen)
                 tstamp = int(time_list[i] * 1e9)
-                logging.debug(str(
+                print(str(
+
                        scp['time_bins'][i]) + ':' + class_names[int(out_predict[i])])
                 plugin.publish("weather.classifier.class",
                             int(out_predict[i]),
@@ -235,7 +252,9 @@ if __name__ == '__main__':
         action='store_true', help='Verbose')
     parser.add_argument(
         '--input', dest='input',
-        action='store', default='sgpdlacfC1.a1',
+
+        action='store', default='sgpdlacfC1.a0',
+
         help='Path to input device or ARM datastream name')
     parser.add_argument(
         '--model', dest='model',
