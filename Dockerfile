@@ -1,27 +1,29 @@
-FROM waggle/plugin-base:1.1.1-ml-cuda11.0-amd64
+FROM waggle/plugin-base:1.1.1-ml
 
 RUN apt-get update -y
-RUN apt-get install -y proj-bin
-RUN apt-get install -y libproj-dev
-RUN apt-get install -y libgeos-dev
 RUN apt-get install -y python3-tk
-RUN apt-get install -y python3-nacl
+RUN apt-get install -y libhdf5-serial-dev
 
-RUN pip3 install tensorflow==2.4.0
-RUN pip3 install --upgrade pywaggle
-RUN pip3 install shapely
+RUN pip3 uninstall -y tensorflow
+RUN pip3 install scipy
+RUN pip3 install --pre --extra-index-url https://developer.download.nvidia.com/compute/redist/jp/v44 tensorflow==2.3.0+nv20.9
 RUN pip3 install xarray
-RUN pip3 install cftime
-RUN pip3 install xgboost
-RUN pip3 install paramiko
+RUN pip3 install act-atmos==1.1.0
 RUN pip3 install highiq
+RUN pip3 install paramiko
+RUN pip3 install keras==2.3.0
+RUN pip3 install --upgrade keras-preprocessing
+RUN pip3 install --upgrade pywaggle
+RUN pip3 install --upgrade xarray
 
-RUN ln -s /usr/local/nvidia /usr/local/cuda-11.0
-RUN ln -s /usr/local/cuda-11.0/targets/x86_64-linux/lib/libcusolver.so.10 /usr/local/cuda-11.0/targets/x86_64-linux/lib/libcusolver.so.11
-ENV LD_LIBRARY_PATH="/usr/local/cuda-11.0/targets/x86_64-linux/lib/:${LD_LIBRARY_PATH}"
+ENV MPLBACKEND="agg"
+
 COPY app/ /app/
 COPY app/*.json /app/
+COPY app/*.hdf5 /app/
 COPY *.home_point /app/
+ADD https://anl.box.com/shared/static/lmc19q9mj6rir8j8ecz3765dee30xvmo.hdf5 /app/resnet50.hdf5
 WORKDIR /app
 
-ENTRYPOINT ["/usr/bin/python3", "/app/app.py"]
+ENTRYPOINT ["python3", "/app/app.py"]
+

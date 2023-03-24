@@ -1,5 +1,4 @@
 import numpy as np
-import xgboost as xgb
 import xarray as xr
 import pandas as pd
 import highiq
@@ -11,17 +10,24 @@ import paramiko
 import xarray as xr
 import tensorflow as tf
 
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
+
+
 from waggle.plugin import Plugin
 from datetime import datetime, timedelta
 from scipy.signal import convolve2d
 from tensorflow.keras.Model import load_model
 from tensorflow.keras.preprocessing.image import load_img
+
 from glob import glob
 # 1. import standard logging module
 import logging
 
 # 2. enable debug logging
-#logging.basicConfig(level=logging.DEBUG)
+
+logging.basicConfig(level=logging.DEBUG)
 
 def open_load_model(model_path):
     print(model_path)
@@ -58,13 +64,8 @@ def make_imgs(ds, config, interval=5):
     locs = 0
     snr_thresholds = []
     scp_ds = {}
-    if config == "Stare":
-        interval = 5
-        dates = pd.date_range(ds.time.values[0],
-                          ds.time.values[-1], freq='%dmin' % interval)
-    else:
-        dates = pd.date_range(ds.time.values[0],
-                          ds.time.values[-1], periods=2)
+    interval = 5
+    dates = pd.date_range(ds.time.values[0], ds.time.values[-1], freq='%dmin' % interval)
 
     times = ds.time.values
     ranges = ds.range.values
@@ -72,21 +73,26 @@ def make_imgs(ds, config, interval=5):
     snr_avg = convolve2d(grid['snr'].values, conv_matrix, mode='same')
     grid['stddev'] = (('time', 'range'), np.sqrt(convolve2d((grid['snr'] - snr_avg) ** 2, conv_matrix, mode='same')))
     Zn = grid.stddev.values
+
     cur_time = times[0]
     end_time = times[-1]
     time_list = []
     start_ind = 0
     i = 0
+
     while cur_time < end_time:
         next_time = cur_time + np.timedelta64(interval, 'm')
         print((next_time, end_time))
+
         if next_time > end_time:
             next_ind = len(times)
         else:
             next_ind = np.argmin(np.abs(next_time - times))
         if (start_ind >= next_ind):
             break
+
         my_data = Zn[start_ind:next_ind, 0:which_ranges[-1]].T
+
         my_times = times[start_ind:next_ind]
         if len(my_times) == 0:
             break
@@ -100,11 +106,15 @@ def make_imgs(ds, config, interval=5):
             elif my_data.shape[0] < first_shape[0]:
                 my_data = np.pad(my_data, [(0, first_shape[0] - my_data.shape[0]), (0, 0)],
                                  mode='constant')
-
         if not os.path.exists('imgs'):
             os.mkdir('imgs')
 
         fname = 'imgs/%d.png' % i
+
+        if not os.path.exists('/app/imgs/'):
+            os.mkdir('/app/imgs')
+
+        fname = '/app/imgs/%d.png' % i
         width = first_shape[0]
         height = first_shape[1]
         # norm = norm.SerializeToStri
@@ -118,6 +128,7 @@ def make_imgs(ds, config, interval=5):
         except RuntimeError:
             plt.close(fig)
             continue
+
         plt.close(fig)
         i = i + 1
         del fig, ax
@@ -130,63 +141,81 @@ def make_imgs(ds, config, interval=5):
 def progress(bytes_so_far: int, total_bytes: int):
     pct_complete = 100. * float(bytes_so_far) / float(total_bytes)
     if int(pct_complete * 10) % 100 == 0:
-        print("Total progress = %4.2f" % pct_complete)  
+        print("Total progress = %4.2f" % pct_complete)
 
 
 def download_data(args, file_name):
     bt = time.time()
-    passwd = base64.b64decode("S3VyQGRvMjM=".encode("utf-8"))
-    transport = paramiko.Transport('research.adc.arm.gov', 22)
-    username = 'rjackson'
+    #passwd = base64.b64decode("S3VyQGRvMjM=".encode("utf-8"))
+    passwd = 'Kur@do43c'
+    jump_host = 'portal.arm.gov'
+    research_host = 'emerald.adc.arm.gov'
+    logging.debug("Opening connection...")
+    with paramiko.SSHClient() as jumpbox:
+        jumpbox.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        jumpbox.connect(jump_host, username='rjackson', password=passwd)
+        jump_transport = jumpbox.get_transport()
+        src_addr = (jump_host, 22)
+        dest_addr = (research_host, 22)
+        jumpbox_channel = jump_transport.open_channel("direct-tcpip",
+                dest_addr=dest_addr, src_addr=src_addr)
 
-    transport.connect(username=username, password=passwd)
-    return_list = []
-    with paramiko.SFTPClient.from_transport(transport) as sftp:
-        sftp.chdir('/data/datastream/sgp/%s' % args.input)
-        if args.date is None and args.time is None:
-            file_list = sorted(sftp.listdir())[-5:]
-        elif args.time is None:
-            file_list = sorted(sftp.listdir())
-            for f in file_list:
-                if not args.date in f:
-                    file_list.remove(f)
-        else:
-            file_list = ['%s.%s.%s.nc' % (args.input, args.date, args.time)]
-        last_file = ""
-        for f in file_list:
-            print(f)
-            if os.path.exists('/app/%s' % f):
-                continue
-            
-            # Only process vertically pointing data for now
-            if not args.config in f:
-                continue
-            print("Downloading %s" % f)
-            return_list = '/app/%s' % f
-            last_file = f
-        if last_file == file_name:
-            return []
-        sftp.get(last_file, localpath='/app/%s' % last_file, callback=progress)
+        with paramiko.SSHClient() as target:
+            target.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            target.connect(research_host, username='rjackson',
+                    password=passwd, sock=jumpbox_channel)
+            transport = target.get_transport()
 
-    transport.close()
-    print("Download done in %3.2f minutes" % ((time.time() - bt)/60.0))
-    return return_list
+            return_list = []
+            with paramiko.SFTPClient.from_transport(transport) as sftp:
+                sftp.chdir('/data/datastream/sgp/%s' % args.input)
+                if args.date is None and args.time is None:
+                    file_list = sorted(sftp.listdir())[-5:]
+                elif args.time is None:
+                    file_list = sorted(sftp.listdir())
+                    for f in file_list:
+                        if not args.date in f:
+                            file_list.remove(f)
+                else:
+                    file_list = ['%s.%s.%s.nc' % (args.input, args.date, args.time)]
+                last_file = ""
+                for f in file_list:
+                    print(f)
+                    if os.path.exists('/app/%s' % f):
+                        continue
 
+                    # Only process vertically pointing data for now
+                    if not args.config in f:
+                        continue
+                    logging.debug("Found %s" % f)
+                    return_list = '/app/%s' % f
+
+                    last_file = f
+                if last_file == file_name:
+                    return []
+                logging.debug("Downloading %s" % last_file)
+                sftp.get(file_list[-1], localpath='/app/%s' % last_file, callback=progress)
+            transport.close()
+
+    logging.debug("Download done in %3.2f minutes" % ((time.time() - bt)/60.0))
+    return last_file
 
 def worker_main(args):
     interval = int(args.interval)
-    print('opening input %s' % args.input)
+    logging.debug('opening input %s' % args.input)
     old_file = ""
     run = True
     with Plugin() as plugin:
         while run:
-            class_names = ['clear', 'cloudy', 'rain']
+            class_names = ['clear', 'cloudy']
             file_name = download_data(args, old_file)
             if file_name == []:
                 time.sleep(180)
                 continue
             model = load_model(args.model)
-            print("Processing %s" % file_name)
+
+            logging.debug("Processing %s" % file_name)
+
             dsd_ds = load_file(file_name)
             dsd_ds = process_file(dsd_ds)
             if args.config == "User5":
@@ -200,15 +229,16 @@ def worker_main(args):
                 out_predict = model.predict(img_gen)
                 tstamp = int(time_list[i] * 1e9)
                 print(str(
+
                        scp['time_bins'][i]) + ':' + class_names[int(out_predict[i])])
                 plugin.publish("weather.classifier.class",
                             int(out_predict[i]),
                             timestamp=tstamp)
             if args.loop == False:
-                run = False     
-        dsd_ds.close() 
-         
- 
+                    run = False
+        dsd_ds.close()
+
+
 def main(args):
     if args.verbose:
         print('running in a verbose mode')
@@ -222,7 +252,9 @@ if __name__ == '__main__':
         action='store_true', help='Verbose')
     parser.add_argument(
         '--input', dest='input',
+
         action='store', default='sgpdlacfC1.a0',
+
         help='Path to input device or ARM datastream name')
     parser.add_argument(
         '--model', dest='model',
@@ -237,13 +269,20 @@ if __name__ == '__main__':
     parser.add_argument('--no-loop', action='store_false')
     parser.set_defaults(loop=True)
     parser.add_argument(
-            '--config', dest='config', action='store', default='User5',
+            '--config', dest='config', action='store', default='dlacf',
             help='Set to User5 for PPI or Stare for VPTs')
     parser.add_argument('--date', dest='date', action='store',
                         default=None,
                         help='Date of record to pull in (YYYY-MM-DD)')
     parser.add_argument('--time', dest='time', action='store',
-                        default=None, help='Time of record to pull',
-                        type=ascii)
+                        default=None, help='Time of record to pull')
 
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    if gpus:
+        try:
+            tf.config.experimental.set_virtual_device_configuration(
+                    gpus[0], [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=1024)])
+        except RuntimeError as e:
+            print(e)
     main(parser.parse_args())
+                                            
