@@ -6,14 +6,10 @@ RUN apt-get install -y python3-tk
 
 #RUN pip3 uninstall -y tensorflow
 RUN pip3 install scipy
-#RUN pip3 install --pre --extra-index-url https://developer.download.nvidia.com/compute/redist/jp/v44 tensorflow==2.3.0+nv20.9
+RUN pip3 install --pre --extra-index-url https://developer.download.nvidia.com/compute/redist/jp/v44 tensorflow==2.3.0+nv20.9
 RUN pip3 install netcdf4
 RUN pip3 install xarray
 RUN pip3 install matplotlib
-#RUN pip3 install act-atmos
-#RUN pip3 install highiq
-#RUN pip3 install paramiko
-#RUN pip3 install keras==2.3.0
 #RUN pip3 install --upgrade keras-preprocessing
 RUN pip3 install --upgrade pywaggle
 #RUN pip3 install --upgrade xarray

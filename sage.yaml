@@ -10,6 +10,6 @@ keywords: "lidar, cloud, rain, scene, identification, weather, xgboost"
 homepage: "https://github.com/rcjackson/plugin-weatherclassification"
 source:
     architectures:
-        - "linux/amd64"
+        - "linux/arm64"
     url: "https://github.com/rcjackson/plugin-weatherclassification.git"
     branch: "main"
