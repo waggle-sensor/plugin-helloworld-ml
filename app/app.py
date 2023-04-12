@@ -9,7 +9,7 @@ import os
 import xarray as xr
 import tensorflow as tf
 import glob
-
+import globus_sdk
 import matplotlib.pyplot as plt
 import act
 
@@ -157,15 +157,48 @@ def worker_main(args):
     model = load_model(args.model)
     interval = int(args.interval)
     logging.debug('opening input %s' % args.input)
-    
+
+   # CLIENT_ID = "2a0ee37f-475d-4b7f-8149-d6a2eab37aab"
+   # CLIENT_SECRET = "zQ+Sh52TiNXarGI/xfMeCBZ9ck5o2HSQ2t3K/vY94L4="
+
+   # confidential_client = globus_sdk.ConfidentialAppAuthClient(CLIENT_ID, CLIENT_SECRET)
+
+    # the useful values that you want at the end of this
+  #  scopes = "urn:globus:auth:scope:transfer.api.globus.org:all"
+  #  authorizer = globus_sdk.ClientCredentialsAuthorizer(confidential_client, scopes)
+  #  tc = globus_sdk.TransferClient(authorizer=authorizer)
+  #  local_endpoint = globus_sdk.LocalGlobusConnectPersonal()
+
+  #  source_endpoint_id = "d8da717e-ca5c-11ed-9622-4b6fcc022e5a"
+  #  target_endpoint_id = local_endpoint.endpoint_id
+  #  print(target_endpoint_id)
+  #  print("Endpoints Belonging to {}@clients.auth.globus.org:".format(CLIENT_ID))
+  #  for ep in tc.endpoint_search(filter_scope="my-endpoints"):
+  #      print("[{}] {}".format(ep["id"], ep["display_name"]))
+
+    # create a Transfer task consisting of one or more items
+  #  task_data = globus_sdk.TransferData(
+  #      source_endpoint=source_endpoint_id, destination_endpoint=target_endpoint_id
+  #  )
+  #  task_data.add_item(
+  #      "/202303/20230323/Background-230323-215053.txt",  # source
+  #      "/~/Background-230323-215053.txt",  # dest
+  #  )
+
+    # submit, getting back the task ID
+  #  task_doc = transfer_client.submit_transfer(task_data)
+  #  task_id = task_doc["task_id"]
+  #  print(f"submitted transfer, task_id={task_id}")
+     
     old_file = ""
     run = True
     already_done = []
     with Plugin() as plugin:
         while run:
-            model = load_model(args.model)
+            class_names = ['clear', 'cloudy']
 
             stare_list = glob(os.path.join(args.input, 'Stare*.hpl'))
+            
             for fi in stare_list:
                 logging.debug("Processing %s" % fi)
                 dsd_ds = load_file(fi)
@@ -214,6 +247,7 @@ if __name__ == '__main__':
         action='store_true', help='Verbose')
     parser.add_argument(
         '--input', dest='input',
+        action='store', default='/data',
         help='Path to input device or ARM datastream name')
     parser.add_argument(
         '--model', dest='model',
