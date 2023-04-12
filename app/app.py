@@ -11,13 +11,14 @@ import tensorflow as tf
 import glob
 
 import matplotlib.pyplot as plt
-
+import act
 
 from waggle.plugin import Plugin
 from datetime import datetime, timedelta
 from scipy.signal import convolve2d
 from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing.image import load_img
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.applications.resnet50 import preprocess_input
 
 from glob import glob
 # 1. import standard logging module
@@ -35,8 +36,9 @@ def convert_to_hours_minutes_seconds(decimal_hour, initial_time):
 def load_file(file):
     field_dict = utils.hpl2dict(file)
     initial_time = pd.to_datetime(field_dict['start_time'])
-
-    time = pd.to_datetime([convert_to_hours_minutes_seconds(x, initial_time) for x in field_dict['decimal_time']])
+    
+    time = pd.to_datetime([convert_to_hours_minutes_seconds(x, initial_time) 
+        for x in field_dict['decimal_time']])
 
     ds = xr.Dataset(coords={'range':field_dict['center_of_gates'],
                             'time': time,
@@ -64,20 +66,25 @@ def make_imgs(ds, config, interval=5):
     scp_ds = {}
     interval = 5
     dates = pd.date_range(ds.time.values[0], ds.time.values[-1], freq='%dmin' % interval)
-
+    
     times = ds.time.values
-    ranges = ds.range.values
-    grid['snr'] = grid['snr'] + 2 * np.log10(ranges + 1)
-    snr_avg = convolve2d(grid['snr'].values, conv_matrix, mode='same')
-    grid['stddev'] = (('time', 'range'), 
-            np.sqrt(convolve2d((grid['snr'] - snr_avg) ** 2, conv_matrix, mode='same')))
-    Zn = grid.stddev.values
+    print(times)
+    which_ranges = int(np.argwhere(ds.range.values < 8000.)[-1])
+    ranges = np.tile(ds.range.values, (ds['snr'].shape[1], 1)).T
+    
+    ds['snr'] = ds['snr'] + 2 * np.log10(ranges + 1)
+    conv_matrix = return_convolution_matrix(5, 5)
+    snr_avg = convolve2d(ds['snr'].values, conv_matrix, mode='same')
+    ds['stddev'] = (('range', 'time'), 
+            np.sqrt(convolve2d((ds['snr'] - snr_avg) ** 2, conv_matrix, mode='same')))
+    Zn = ds.stddev.values.T
 
     cur_time = times[0]
     end_time = times[-1]
     time_list = []
     start_ind = 0
     i = 0
+    first_shape = None
 
     while cur_time < end_time:
         next_time = cur_time + np.timedelta64(interval, 'm')
@@ -90,7 +97,7 @@ def make_imgs(ds, config, interval=5):
         if (start_ind >= next_ind):
             break
 
-        my_data = Zn[start_ind:next_ind, 0:which_ranges[-1]].T
+        my_data = Zn[start_ind:next_ind, 0:which_ranges].T
 
         my_times = times[start_ind:next_ind]
         if len(my_times) == 0:
@@ -108,12 +115,14 @@ def make_imgs(ds, config, interval=5):
         if not os.path.exists('imgs'):
             os.mkdir('imgs')
 
-        fname = 'imgs/%d.png' % i
 
         if not os.path.exists('/app/imgs/'):
             os.mkdir('/app/imgs')
+        
+        if not os.path.exists('/app/imgs/train'):
+            os.mkdir('/app/imgs/train')
 
-        fname = '/app/imgs/%d.png' % i
+        fname = '/app/imgs/train/%d.png' % i
         width = first_shape[0]
         height = first_shape[1]
         # norm = norm.SerializeToStri
@@ -144,6 +153,8 @@ def progress(bytes_so_far: int, total_bytes: int):
 
 
 def worker_main(args):
+    logging.debug("Loading model %s" % args.model)
+    model = load_model(args.model)
     interval = int(args.interval)
     logging.debug('opening input %s' % args.input)
     
@@ -152,34 +163,42 @@ def worker_main(args):
     already_done = []
     with Plugin() as plugin:
         while run:
-            class_names = ['clear', 'cloudy']
             model = load_model(args.model)
 
             stare_list = glob(os.path.join(args.input, 'Stare*.hpl'))
             for fi in stare_list:
                 logging.debug("Processing %s" % fi)
-                dsd_ds = load_file(file_name)
+                dsd_ds = load_file(fi)
+                print(dsd_ds)
                 time_list = make_imgs(dsd_ds, args.config)
                 dsd_ds.close()
-                file_list = glob('imgs/*.png')
-                i = 0
-                for fido in file_list:
-                    if time_list[i] not in already_done:
-                        img_gen = load_img(fido)
-                        out_predict = model.predict(img_gen).argmax(axis=1)
-                        tstamp = int(time_list[i] * 1e9)
-                        if out_predict == 0:
+                file_list = glob('/app/imgs/*.png')
+                print(file_list)
+                
+                img_gen = ImageDataGenerator(
+                    preprocessing_function=preprocess_input)
+
+                gen = img_gen.flow_from_directory(
+                         '/app/imgs/', target_size=(256, 128), shuffle=False)
+                out_predict = model.predict(gen).argmax(axis=1)
+                
+                for i, ti in enumerate(time_list):
+                    if ti not in already_done:
+                        tstamp = int(ti)
+                        
+                        if out_predict[i] == 0:
                             string = "clear"
                         else:
                             string = "clouds/rain"
-                        logging.debug("%s: %s" % (str(tsamp, string)))
+                        logging.debug("%s: %s" % (str(ti), string))
+
                         plugin.publish("weather.classifier.class",
                                 int(out_predict[i]),
                                 timestamp=tstamp)
-                        already_done.append(time_list[i])
+                        already_done.append(ti)
+                    
             if args.loop == False:
                 run = False
-        dsd_ds.close()
 
 
 def main(args):
@@ -195,7 +214,6 @@ if __name__ == '__main__':
         action='store_true', help='Verbose')
     parser.add_argument(
         '--input', dest='input',
-        action='store', default='data',
         help='Path to input device or ARM datastream name')
     parser.add_argument(
         '--model', dest='model',
