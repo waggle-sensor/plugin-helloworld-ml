@@ -12,7 +12,7 @@ RUN pip3 install xarray
 RUN pip3 install matplotlib
 #RUN pip3 install --upgrade keras-preprocessing
 RUN pip3 install --upgrade pywaggle
-RUN pip3 install act-atmos=1.1.0
+RUN pip3 install act-atmos==1.1.0
 #RUN pip3 install --upgrade xarray
 
 ENV MPLBACKEND="agg"
